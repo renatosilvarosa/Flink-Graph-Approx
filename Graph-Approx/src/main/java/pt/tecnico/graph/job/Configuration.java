@@ -1,4 +1,4 @@
-package pt.tecnico.graph;
+package pt.tecnico.graph.job;
 
 import java.io.Serializable;
 

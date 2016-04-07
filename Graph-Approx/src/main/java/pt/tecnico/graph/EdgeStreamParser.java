@@ -3,6 +3,7 @@ package pt.tecnico.graph;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.graph.Edge;
 import org.apache.flink.types.NullValue;
+import pt.tecnico.graph.job.Configuration;
 
 import java.io.BufferedReader;
 import java.io.IOException;
