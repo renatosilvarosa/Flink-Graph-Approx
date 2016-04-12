@@ -3,6 +3,7 @@ package pt.tecnico.graph.job;
 import org.apache.flink.api.common.io.OutputFormat;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.graph.Edge;
 import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.GraphAlgorithm;
@@ -19,8 +20,10 @@ import java.util.stream.Collectors;
  * Created by Renato on 07/04/2016.
  */
 public abstract class ApproxGraphGob<K, VV, EV, U, R> implements Serializable {
-    protected static final Configuration DEFAULT_CONFIGURATION = new Configuration(5000, 1000);
-    protected final Configuration configuration;
+    public static final String ITERATION = "ApproxGraphGob.iteration";
+
+    protected static final GraphJobConfiguration DEFAULT_CONFIGURATION = new GraphJobConfiguration(5000, 1000);
+    protected final GraphJobConfiguration configuration;
     protected final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
 
     protected final Collection<U> accumulator = Collections.synchronizedCollection(new ArrayList<>());
@@ -33,8 +36,9 @@ public abstract class ApproxGraphGob<K, VV, EV, U, R> implements Serializable {
     protected BlockingQueue<U> pendingUpdates;
     protected ExecutionEnvironment graphEnvironment;
     protected ScheduledFuture<?> nextExecution;
+    protected int iteration = 0;
 
-    public ApproxGraphGob(Configuration configuration) {
+    public ApproxGraphGob(GraphJobConfiguration configuration) {
         this.configuration = configuration;
     }
 
@@ -83,7 +87,6 @@ public abstract class ApproxGraphGob<K, VV, EV, U, R> implements Serializable {
             }
 
             try {
-                graph.getContext().startNewSession();
                 graph = updateGraph(updates);
                 runAlgorithm();
             } catch (Exception e) {
@@ -96,8 +99,12 @@ public abstract class ApproxGraphGob<K, VV, EV, U, R> implements Serializable {
 
     private void runAlgorithm() throws Exception {
         DataSet<R> result = graph.run(algorithm);
-        result.output(outputFormat);
+        Configuration conf = new Configuration();
+        conf.setInteger(ITERATION, iteration);
+        result.output(outputFormat).withParameters(conf).setParallelism(1);
+        graph.getContext().setParallelism(1);
         graph.getContext().execute();
+        iteration++;
     }
 
     public void setGraph(Graph<K, VV, EV> graph) {

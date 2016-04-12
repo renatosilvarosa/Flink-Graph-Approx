@@ -5,14 +5,14 @@ import java.io.Serializable;
 /**
  * Created by Renato on 30/03/2016.
  */
-public class Configuration implements Serializable {
+public class GraphJobConfiguration implements Serializable {
     private long maximumTime;
     private int maximumUpdates;
 
-    public Configuration() {
+    public GraphJobConfiguration() {
     }
 
-    public Configuration(long maximumTime, int maximumUpdates) {
+    public GraphJobConfiguration(long maximumTime, int maximumUpdates) {
         this.maximumTime = maximumTime;
         this.maximumUpdates = maximumUpdates;
     }

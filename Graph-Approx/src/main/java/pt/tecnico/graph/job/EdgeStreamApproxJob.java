@@ -15,7 +15,7 @@ public class EdgeStreamApproxJob<K, EV, R> extends ApproxGraphGob<K, NullValue, 
         this(DEFAULT_CONFIGURATION);
     }
 
-    public EdgeStreamApproxJob(Configuration configuration) {
+    public EdgeStreamApproxJob(GraphJobConfiguration configuration) {
         super(configuration);
     }
 
