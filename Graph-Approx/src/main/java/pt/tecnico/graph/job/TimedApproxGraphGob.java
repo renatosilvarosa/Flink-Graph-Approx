@@ -19,8 +19,8 @@ import java.util.stream.Collectors;
 /**
  * Created by Renato on 07/04/2016.
  */
-public abstract class ApproxGraphGob<K, VV, EV, U, R> implements Serializable {
-    public static final String ITERATION = "ApproxGraphGob.iteration";
+public abstract class TimedApproxGraphGob<K, VV, EV, U, R> implements Serializable {
+    public static final String ITERATION = "TimedApproxGraphGob.iteration";
 
     protected static final GraphJobConfiguration DEFAULT_CONFIGURATION = new GraphJobConfiguration(5000, 1000);
     protected final GraphJobConfiguration configuration;
@@ -38,7 +38,7 @@ public abstract class ApproxGraphGob<K, VV, EV, U, R> implements Serializable {
     protected ScheduledFuture<?> nextExecution;
     protected int iteration = 0;
 
-    public ApproxGraphGob(GraphJobConfiguration configuration) {
+    public TimedApproxGraphGob(GraphJobConfiguration configuration) {
         this.configuration = configuration;
     }
 

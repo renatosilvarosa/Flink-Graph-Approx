@@ -14,7 +14,7 @@ import java.util.Set;
 /**
  * Created by Renato on 07/04/2016.
  */
-public class EdgeAddDeleteStreamJob<K, R> extends ApproxGraphGob<K, NullValue, NullValue, Tuple2<String, Edge<K, NullValue>>, R> {
+public class EdgeAddDeleteStreamJob<K, R> extends TimedApproxGraphGob<K, NullValue, NullValue, Tuple2<String, Edge<K, NullValue>>, R> {
     public EdgeAddDeleteStreamJob(GraphJobConfiguration configuration) {
         super(configuration);
     }

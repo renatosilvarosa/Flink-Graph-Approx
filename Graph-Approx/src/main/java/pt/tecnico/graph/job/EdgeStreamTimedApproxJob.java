@@ -9,13 +9,13 @@ import java.util.List;
 /**
  * Created by Renato on 30/03/2016.
  */
-public class EdgeStreamApproxJob<K, EV, R> extends ApproxGraphGob<K, NullValue, EV, Edge<K, EV>, R> {
+public class EdgeStreamTimedApproxJob<K, EV, R> extends TimedApproxGraphGob<K, NullValue, EV, Edge<K, EV>, R> {
 
-    public EdgeStreamApproxJob() {
+    public EdgeStreamTimedApproxJob() {
         this(DEFAULT_CONFIGURATION);
     }
 
-    public EdgeStreamApproxJob(GraphJobConfiguration configuration) {
+    public EdgeStreamTimedApproxJob(GraphJobConfiguration configuration) {
         super(configuration);
     }
 

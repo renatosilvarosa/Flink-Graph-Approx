@@ -4,7 +4,7 @@ import org.apache.flink.api.java.io.CsvOutputFormat;
 import org.apache.flink.api.java.tuple.Tuple;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
-import pt.tecnico.graph.job.ApproxGraphGob;
+import pt.tecnico.graph.job.TimedApproxGraphGob;
 
 import java.io.IOException;
 
@@ -24,7 +24,7 @@ public class RollingCsvOutputFormat<T extends Tuple> extends CsvOutputFormat<T> 
     @Override
     public void configure(Configuration parameters) {
         super.configure(parameters);
-        this.iteration = parameters.getInteger(ApproxGraphGob.ITERATION, 0);
+        this.iteration = parameters.getInteger(TimedApproxGraphGob.ITERATION, 0);
     }
 
     @Override

@@ -1,5 +1,9 @@
 package pt.tecnico.graph.validation;
 
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.java.DataSet;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.typeutils.TupleTypeInfo;
 import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.validation.GraphValidator;
 
@@ -7,11 +11,25 @@ import org.apache.flink.graph.validation.GraphValidator;
  * Created by Renato on 13/04/2016.
  */
 public class UniqueVertexIdsValidator<K, VV, EV> extends GraphValidator<K, VV, EV> {
+
+    private static TypeInformation<Integer> intTypeInfo = TypeInformation.of(Integer.class);
+
+    private DataSet<Tuple2<K, Integer>> notUniqueIds;
+
     @Override
     public boolean validate(Graph<K, VV, EV> graph) throws Exception {
-        long total = graph.getVertexIds().count();
-        long distinct = graph.getVertexIds().distinct().count();
+        DataSet<K> vertexIds = graph.getVertexIds();
 
-        return total == distinct;
+        notUniqueIds = vertexIds
+                .map(k -> Tuple2.of(k, 1))
+                .returns(new TupleTypeInfo<>(vertexIds.getType(), intTypeInfo))
+                .groupBy(0).sum(1)
+                .filter(sum -> sum.f1 > 1);
+
+        return notUniqueIds.count() == 0;
+    }
+
+    public DataSet<Tuple2<K, Integer>> getNotUniqueIds() {
+        return notUniqueIds;
     }
 }
