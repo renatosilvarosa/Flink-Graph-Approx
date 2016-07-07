@@ -29,5 +29,10 @@
             <artifactId>objenesis</artifactId>
             <version>LATEST</version>
         </dependency>
+        <dependency>
+            <groupId>pt.tecnico</groupId>
+            <artifactId>flink-graph-algorithms</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

@@ -18,7 +18,7 @@ public class AverageDegree<K, VV, EV> implements GraphAlgorithm<K, VV, EV, DataS
         TypeHint<Tuple2<Long, Integer>> tuple2TypeHint = new TypeHint<Tuple2<Long, Integer>>() {
         };
         return graph.outDegrees()
-                .map(t -> Tuple2.of(t.f1, 1))
+                .map(t -> Tuple2.of(t.f1.getValue(), 1))
                 .returns(tuple2TypeHint)
                 .reduce((t1, t2) -> Tuple2.of(t1.f0 + t2.f0, t1.f1 + t2.f1))
                 .returns(tuple2TypeHint)
