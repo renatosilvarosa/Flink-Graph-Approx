@@ -5,9 +5,7 @@ import org.apache.flink.graph.Graph;
 import org.apache.flink.types.NullValue;
 import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRank;
 import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRankConfig;
-import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRankExecutionStatistics;
 import pt.tecnico.graph.algorithm.pagerank.PageRankCsvOutputFormat;
-import pt.tecnico.graph.stream.GraphUpdateStatistics;
 import pt.tecnico.graph.stream.SocketStreamProvider;
 
 import java.time.LocalDateTime;
@@ -28,19 +26,20 @@ public class Main {
                     .fieldDelimiterEdges("\t")
                     .keyType(Long.class);
 
-            ApproximatedPageRankConfig config = new ApproximatedPageRankConfig().setBeta(0.85).setIterations(30)
-                    .setPrintRanks(false).setNeighborhoodSize(1).setOutputSize(100);
+            ApproximatedPageRankConfig config = new ApproximatedPageRankConfig().setBeta(0.85).setIterations(20)
+                    .setNeighborhoodSize(1).setOutputSize(1000);
 
             LocalDateTime.now();
             PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat("D:/Documents/Dissertação/Results/", System.lineSeparator(), ";", false, true);
+            outputFormat.setName("pageRank");
 
             ApproximatedPageRank approximatedPageRank = new ApproximatedPageRank(new SocketStreamProvider<>("localhost", 1234, s -> s),
                     graph);
             approximatedPageRank.setConfig(config);
             approximatedPageRank.setOutputFormat(outputFormat);
 
-            approximatedPageRank.addQueryListener((query, algorithm) -> {
-                ApproximatedPageRankExecutionStatistics lastExecutionStatistics = algorithm.getLastExecutionStatistics();
+            approximatedPageRank.setDecider((query, algorithm) -> {
+/*                ApproximatedPageRankExecutionStatistics lastExecutionStatistics = algorithm.getLastExecutionStatistics();
                 try {
                     System.err.println("\tSummary vertices: " + lastExecutionStatistics.getNumberOfSummaryVertices());
                     System.err.println("\tSummary edges: " + lastExecutionStatistics.getNumberOfSummaryEdges());
@@ -61,7 +60,9 @@ public class Main {
                 System.err.println("\tRemoved vertices: " + updateStatistics.getRemovedEdges());
                 System.err.println("\tUpdated vertices: " + updateStatistics.getUpdatedVertices());
                 System.err.println("\tTotal vertices: " + updateStatistics.getTotalVertices());
-                System.err.println("\tTotal edges: " + updateStatistics.getTotalEdges());
+                System.err.println("\tTotal edges: " + updateStatistics.getTotalEdges());*/
+
+                return ApproximatedPageRank.DeciderResponse.COMPUTE_APPROXIMATE;
 
             });
 

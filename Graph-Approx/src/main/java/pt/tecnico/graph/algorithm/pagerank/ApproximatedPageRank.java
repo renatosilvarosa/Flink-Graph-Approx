@@ -15,8 +15,8 @@ import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.Vertex;
 import org.apache.flink.types.NullValue;
 import org.apache.flink.util.Collector;
-import pt.tecnico.graph.algorithm.ApproximatedSimplePageRank;
 import pt.tecnico.graph.algorithm.SimplePageRank;
+import pt.tecnico.graph.algorithm.SummarizedGraphPageRank;
 import pt.tecnico.graph.stream.GraphStreamHandler;
 import pt.tecnico.graph.stream.GraphUpdateStatistics;
 import pt.tecnico.graph.stream.GraphUpdateTracker;
@@ -41,7 +41,7 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
     private ApproximatedPageRankExecutionStatistics executionStatistics;
 
     private int iteration = 0;
-    private List<PageRankQueryListener> queryListeners = new ArrayList<>();
+    private PageRankQueryDecider decider;
 
     public ApproximatedPageRank(StreamProvider<String> updateStream, Graph<Long, NullValue, NullValue> graph) {
         super(updateStream, graph);
@@ -64,9 +64,7 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
             edgeOutputFormat.setOutputFilePath(new Path("./edges" + iteration));
             graph.getEdgeIds().output(edgeOutputFormat);
 
-            DataSet<Tuple2<Long, Double>> ranks = graph.run(new SimplePageRank<>(config.getBeta(), 1.0, config.getIterations()));
-            executionStatistics = new ApproximatedPageRankExecutionStatistics(graph,
-                    config.getIterations(), env.getLastJobExecutionResult().getNetRuntime());
+            DataSet<Tuple2<Long, Double>> ranks = computeExact();
 
             rankTypeInfo = ranks.getType();
             rankInputFormat = new TypeSerializerInputFormat<>(rankTypeInfo);
@@ -78,7 +76,7 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
 
             // iteration 0
             ranks.output(rankOutputFormat);
-            outputResult("pageRank", "", ranks);
+            outputResult("", ranks);
 
             env.execute("First PageRank calculation");
         } catch (Exception e) {
@@ -104,63 +102,29 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
                         iteration++;
                         applyUpdates();
 
-                        queryListeners.forEach(l -> l.onQuery(update, this));
-
                         String date = split[1];
-
-                        DataSet<Tuple2<Long, Double>> truePR = graph.run(new SimplePageRank<>(config.getBeta(), 1.0, config.getIterations()));
-                        outputResult("true_pageRank", date, truePR);
-                        env.execute("True PageRank it. " + iteration);
 
                         rankInputFormat.setFilePath("ranks" + ((iteration - 1) % 5));
                         DataSet<Tuple2<Long, Double>> previousRanks = env.createInput(rankInputFormat, rankTypeInfo);
 
-                        Set<Long> updatedIds = graphUpdateTracker.allUpdatedVertexIds(EdgeDirection.ALL);
+                        DeciderResponse response = decider.onQuery(update, this);
+
                         rankOutputFormat.setOutputFilePath(new Path("./ranks" + (iteration % 5)));
 
-                        if (updatedIds.isEmpty()) {
-                            rankOutputFormat.setOutputFilePath(new Path("./ranks" + (iteration % 5)));
-                            previousRanks.output(rankOutputFormat);
-                            outputResult("pageRank", date, previousRanks);
-                            env.execute("Approx PageRank it. " + iteration);
-                            continue;
+                        DataSet<Tuple2<Long, Double>> newRanks = null;
+                        if (response == DeciderResponse.REPEAT_LAST_ANSWER) {
+                            newRanks = previousRanks;
+                        } else if (response == DeciderResponse.COMPUTE_APPROXIMATE) {
+                            newRanks = computeApproximate(previousRanks);
+                        } else if (response == DeciderResponse.COMPUTE_EXACT) {
+                            newRanks = computeExact();
                         }
 
-                        Vertex<Long, Double> bigVertex = new Vertex<>(0L, 0.0);
-                        Graph<Long, Double, Double> representativeGraph = new RepresentativeGraphBuilder<>(graph, 1.0)
-                                .representativeGraph(env.fromCollection(updatedIds, TypeInformation.of(Long.class)),
-                                        previousRanks, config.getNeighborhoodSize(), bigVertex);
-
-                        DataSet<Tuple2<Long, Double>> ranks = representativeGraph.run(new ApproximatedSimplePageRank(config.getBeta(), config.getIterations(), bigVertex.getId()));
-
-                        DataSet<Tuple2<Long, Double>> newRanks = previousRanks.coGroup(ranks)
-                                .where(0).equalTo(0)
-                                .with(new CoGroupFunction<Tuple2<Long, Double>, Tuple2<Long, Double>, Tuple2<Long, Double>>() {
-                                    @Override
-                                    public void coGroup(Iterable<Tuple2<Long, Double>> previous, Iterable<Tuple2<Long, Double>> newRanks, Collector<Tuple2<Long, Double>> out) throws Exception {
-                                        Iterator<Tuple2<Long, Double>> prevIt = previous.iterator();
-                                        Iterator<Tuple2<Long, Double>> newIt = newRanks.iterator();
-
-                                        if (newIt.hasNext()) {
-                                            Tuple2<Long, Double> next = newIt.next();
-                                            if (!next.f0.equals(bigVertex.getId())) {
-                                                out.collect(next);
-                                            }
-                                        } else if (prevIt.hasNext()) {
-                                            out.collect(prevIt.next());
-                                        }
-                                    }
-                                });
-
-                        rankOutputFormat.setOutputFilePath(new Path("./ranks" + (iteration % 5)));
+                        assert newRanks != null : "Ranks are null";
+                        outputResult(date, newRanks);
                         newRanks.output(rankOutputFormat);
 
-                        outputResult("pageRank", date, newRanks);
                         env.execute("Approx PageRank it. " + iteration);
-                        executionStatistics = new ApproximatedPageRankExecutionStatistics(representativeGraph,
-                                config.getIterations(), env.getLastJobExecutionResult().getNetRuntime());
-
-                        graphUpdateTracker.reset(updatedIds);
                         break;
                     case "END":
                         return;
@@ -171,6 +135,49 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
         }
     }
 
+    private DataSet<Tuple2<Long, Double>> computeExact() throws Exception {
+        DataSet<Tuple2<Long, Double>> ranks = graph.run(new SimplePageRank<>(config.getBeta(), 1.0, config.getIterations()));
+        executionStatistics = new ApproximatedPageRankExecutionStatistics(graph,
+                config.getIterations(), env.getLastJobExecutionResult().getNetRuntime());
+        graphUpdateTracker.resetAll();
+        return ranks;
+    }
+
+    private DataSet<Tuple2<Long, Double>> computeApproximate(DataSet<Tuple2<Long, Double>> previousRanks) throws Exception {
+        Set<Long> updatedIds = graphUpdateTracker.updatedAboveThresholdVertexIds(config.getUpdatedRatioThreshold(), EdgeDirection.ALL);
+
+        Vertex<Long, Double> bigVertex = new Vertex<>(0L, 0.0);
+        Graph<Long, Double, Double> representativeGraph = new RepresentativeGraphBuilder<>(graph, 1.0)
+                .representativeGraph(env.fromCollection(updatedIds, TypeInformation.of(Long.class)),
+                        previousRanks, config.getNeighborhoodSize(), bigVertex);
+
+        DataSet<Tuple2<Long, Double>> ranks = representativeGraph.run(new SummarizedGraphPageRank(config.getBeta(), config.getIterations(), bigVertex.getId()));
+
+        DataSet<Tuple2<Long, Double>> newRanks = previousRanks.coGroup(ranks)
+                .where(0).equalTo(0)
+                .with(new CoGroupFunction<Tuple2<Long, Double>, Tuple2<Long, Double>, Tuple2<Long, Double>>() {
+                    @Override
+                    public void coGroup(Iterable<Tuple2<Long, Double>> previous, Iterable<Tuple2<Long, Double>> newRanks, Collector<Tuple2<Long, Double>> out) throws Exception {
+                        Iterator<Tuple2<Long, Double>> prevIt = previous.iterator();
+                        Iterator<Tuple2<Long, Double>> newIt = newRanks.iterator();
+
+                        if (newIt.hasNext()) {
+                            Tuple2<Long, Double> next = newIt.next();
+                            if (!next.f0.equals(bigVertex.getId())) {
+                                out.collect(next);
+                            }
+                        } else if (prevIt.hasNext()) {
+                            out.collect(prevIt.next());
+                        }
+                    }
+                });
+
+        graphUpdateTracker.reset(updatedIds);
+        executionStatistics = new ApproximatedPageRankExecutionStatistics(representativeGraph,
+                config.getIterations(), env.getLastJobExecutionResult().getNetRuntime());
+        return newRanks;
+    }
+
     public GraphUpdateStatistics getGraphUpdateStatistics() {
         return graphUpdateTracker.getUpdateStatistics();
     }
@@ -179,8 +186,7 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
         return executionStatistics;
     }
 
-    private void outputResult(String name, String date, DataSet<Tuple2<Long, Double>> ranks) {
-        outputFormat.setName(name);
+    private void outputResult(String date, DataSet<Tuple2<Long, Double>> ranks) {
         outputFormat.setIteration(iteration);
         outputFormat.setTags(date);
         ranks.sortPartition(1, Order.DESCENDING).setParallelism(1).first(config.getOutputSize()).output(outputFormat);
@@ -248,16 +254,19 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
         this.config = config;
     }
 
-    public void addQueryListener(PageRankQueryListener listener) {
-        queryListeners.add(listener);
+    public ApproximatedPageRank setDecider(PageRankQueryDecider decider) {
+        this.decider = decider;
+        return this;
     }
 
-    public void removeQueryListener(PageRankQueryListener listener) {
-        queryListeners.remove(listener);
+    public enum DeciderResponse {
+        REPEAT_LAST_ANSWER,
+        COMPUTE_APPROXIMATE,
+        COMPUTE_EXACT
     }
 
     @FunctionalInterface
-    public interface PageRankQueryListener {
-        void onQuery(String query, ApproximatedPageRank algorithm);
+    public interface PageRankQueryDecider {
+        DeciderResponse onQuery(String query, ApproximatedPageRank algorithm);
     }
 }

@@ -107,25 +107,29 @@ public class GraphUpdateTracker<K> implements Serializable {
     }
 
     public Set<K> updatedAboveThresholdVertexIds(double threshold, EdgeDirection direction) {
+        if (threshold <= 0.0) {
+            return allUpdatedVertexIds(direction);
+        }
+
         Predicate<Map.Entry<K, UpdateInfo>> pred;
         switch (direction) {
             case IN:
                 pred = e -> {
                     UpdateInfo i = e.getValue();
-                    return i.prevInDegree != 0 ? i.currInDegree / i.prevInDegree > threshold : i.currInDegree > 0;
+                    return degreeUpdateRatio(i.prevInDegree, i.currInDegree) > threshold;
                 };
                 break;
             case OUT:
                 pred = e -> {
                     UpdateInfo i = e.getValue();
-                    return i.prevOutDegree != 0 ? i.currOutDegree / i.prevOutDegree > threshold : i.currOutDegree > 0;
+                    return degreeUpdateRatio(i.prevOutDegree, i.currOutDegree) > threshold;
                 };
                 break;
             default:
                 pred = e -> {
                     UpdateInfo i = e.getValue();
-                    return i.prevInDegree != 0 ? i.currInDegree / i.prevInDegree > threshold : i.currInDegree > 0 ||
-                            i.prevOutDegree != 0 ? i.currOutDegree / i.prevOutDegree > threshold : i.currOutDegree > 0;
+                    return degreeUpdateRatio(i.prevInDegree, i.currInDegree) > threshold ||
+                            degreeUpdateRatio(i.prevOutDegree, i.currOutDegree) > threshold;
                 };
                 break;
         }
@@ -136,7 +140,16 @@ public class GraphUpdateTracker<K> implements Serializable {
                 .collect(Collectors.toSet());
     }
 
-    public long numberOfUpdatedVertices() {
+    private double degreeUpdateRatio(long prevDeg, long currDeg) {
+        assert prevDeg >= 0 && currDeg >= 0 : "Negative degrees";
+        if (prevDeg == 0) {
+            return Double.POSITIVE_INFINITY;
+        }
+
+        return Math.abs((double) currDeg / prevDeg - 1.0);
+    }
+
+    private long numberOfUpdatedVertices() {
         return infoMap.values().parallelStream()
                 .filter(i -> i.nUpdates > 0)
                 .collect(Collectors.counting());
@@ -165,7 +178,11 @@ public class GraphUpdateTracker<K> implements Serializable {
     }
 
     public void reset(Collection<K> ids) throws Exception {
-        ids.stream().forEach(id -> infoMap.get(id).reset());
+        ids.forEach(id -> infoMap.get(id).reset());
+    }
+
+    public void resetAll() {
+        infoMap.values().forEach(UpdateInfo::reset);
     }
 
     public long numberOfVertices() {

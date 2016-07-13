@@ -13,13 +13,13 @@ import java.io.Serializable;
 /**
  * Created by Renato on 10/04/2016.
  */
-public class ApproximatedSimplePageRank implements GraphAlgorithm<Long, Double, Double, DataSet<Tuple2<Long, Double>>>, Serializable {
+public class SummarizedGraphPageRank implements GraphAlgorithm<Long, Double, Double, DataSet<Tuple2<Long, Double>>>, Serializable {
 
     private final double beta;
     private final int iterations;
     private final Long bigVertexId;
 
-    public ApproximatedSimplePageRank(double beta, int iterations, Long bigVertexId) {
+    public SummarizedGraphPageRank(double beta, int iterations, Long bigVertexId) {
         this.beta = beta;
         this.bigVertexId = bigVertexId;
         this.iterations = iterations;

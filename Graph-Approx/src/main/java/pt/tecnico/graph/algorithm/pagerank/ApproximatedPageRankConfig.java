@@ -4,15 +4,12 @@ package pt.tecnico.graph.algorithm.pagerank;
  * Created by Renato on 29/06/2016.
  */
 public class ApproximatedPageRankConfig {
-    private int iterations;
-    private double beta;
-    private double updatedRatioThreshold;
-    private long updatedNumberThreshold;
-    private int neighborhoodSize;
-    private boolean printRanks;
-    private int outputSize;
-    private int maximumApproximatedComputations;
-    private double maximumSampleRelativeSize;
+    private int iterations = 20;
+    private double beta = 0.85;
+    private double updatedRatioThreshold = 0.0;
+    private long updatedNumberThreshold = 0;
+    private int neighborhoodSize = 1;
+    private int outputSize = 1000;
 
 
     public int getIterations() {
@@ -57,33 +54,6 @@ public class ApproximatedPageRankConfig {
 
     public ApproximatedPageRankConfig setNeighborhoodSize(int neighborhoodSize) {
         this.neighborhoodSize = neighborhoodSize;
-        return this;
-    }
-
-    public boolean isPrintRanks() {
-        return printRanks;
-    }
-
-    public ApproximatedPageRankConfig setPrintRanks(boolean printRanks) {
-        this.printRanks = printRanks;
-        return this;
-    }
-
-    public int getMaximumApproximatedComputations() {
-        return maximumApproximatedComputations;
-    }
-
-    public ApproximatedPageRankConfig setMaximumApproximatedComputations(int maximumApproximatedComputations) {
-        this.maximumApproximatedComputations = maximumApproximatedComputations;
-        return this;
-    }
-
-    public double getMaximumSampleRelativeSize() {
-        return maximumSampleRelativeSize;
-    }
-
-    public ApproximatedPageRankConfig setMaximumSampleRelativeSize(double maximumSampleRelativeSize) {
-        this.maximumSampleRelativeSize = maximumSampleRelativeSize;
         return this;
     }
 
