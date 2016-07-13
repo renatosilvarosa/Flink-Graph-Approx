@@ -13,6 +13,7 @@
         <module>Graph-Approx</module>
         <module>Graph-Algorithms</module>
         <module>Tester</module>
+        <module>Graph-Sampler</module>
     </modules>
 
     <properties>

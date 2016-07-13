@@ -1,13 +1,16 @@
-package pt.tecnico.graph.job.pagerank;
+package pt.tecnico.graph.algorithm.pagerank;
 
+import org.apache.flink.api.common.accumulators.LongCounter;
 import org.apache.flink.api.common.functions.CoGroupFunction;
 import org.apache.flink.api.common.functions.JoinFunction;
+import org.apache.flink.api.common.functions.RichJoinFunction;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.aggregation.Aggregations;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.graph.Edge;
 import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.Vertex;
@@ -37,16 +40,10 @@ public class RepresentativeGraphBuilder<VV, EV> {
         DataSet<Long> expandedVertexIds = expandedVertexIds(updatedVertices, level);
 
         // Generate vertices with previous rank, or initialRank (for new vertices), as values
-        final double initRank = initialRank;
         DataSet<Vertex<Long, Double>> kernelVertices = expandedVertexIds
                 .leftOuterJoin(previousRanks)
                 .where(keySelector).equalTo(0)
-                .with(new JoinFunction<Long, Tuple2<Long, Double>, Vertex<Long, Double>>() {
-                    @Override
-                    public Vertex<Long, Double> join(Long id, Tuple2<Long, Double> rank) throws Exception {
-                        return new Vertex<>(id, rank != null ? rank.f1 : initRank);
-                    }
-                });
+                .with(new KernelVertexJoinFunction(initialRank));
 
         // Select the edges between the kernel vertices, with 1/(degree of source) as the value
         DataSet<Edge<Long, Double>> internalEdges = selectEdges(kernelVertices)
@@ -109,7 +106,7 @@ public class RepresentativeGraphBuilder<VV, EV> {
         return Graph.fromDataSet(vertices, edges, originalGraph.getContext());
     }
 
-    public DataSet<Long> expandedVertexIds(DataSet<Long> originalVertexIds, int level) throws Exception {
+    private DataSet<Long> expandedVertexIds(DataSet<Long> originalVertexIds, int level) throws Exception {
         DataSet<Long> expandedIds = originalVertexIds;
         VertexKeySelector<Long> keySelector = new VertexKeySelector<>(TypeInformation.of(Long.class));
         while (level > 0) {
@@ -126,7 +123,7 @@ public class RepresentativeGraphBuilder<VV, EV> {
         return expandedIds;
     }
 
-    public DataSet<Edge<Long, Double>> selectEdges(DataSet<Vertex<Long, Double>> vertices) {
+    private DataSet<Edge<Long, Double>> selectEdges(DataSet<Vertex<Long, Double>> vertices) {
         return vertices
                 .joinWithHuge(originalGraph.getEdges())
                 .where(0).equalTo(0)
@@ -141,13 +138,13 @@ public class RepresentativeGraphBuilder<VV, EV> {
                 .with(new JoinFunction<Edge<Long, EV>, Vertex<Long, Double>, Edge<Long, Double>>() {
                     @Override
                     public Edge<Long, Double> join(Edge<Long, EV> e, Vertex<Long, Double> v) throws Exception {
-                        return new Edge<Long, Double>(e.getSource(), e.getTarget(), 0.0);
+                        return new Edge<>(e.getSource(), e.getTarget(), 0.0);
                     }
                 })
                 .distinct(0, 1);
     }
 
-    public DataSet<Edge<Long, Double>> externalEdges(DataSet<Edge<Long, Double>> edgesToBeRemoved) {
+    private DataSet<Edge<Long, Double>> externalEdges(DataSet<Edge<Long, Double>> edgesToBeRemoved) {
         return originalGraph.getEdges().coGroup(edgesToBeRemoved)
                 .where(0, 1).equalTo(0, 1)
                 .with(new CoGroupFunction<Edge<Long, EV>, Edge<Long, Double>, Edge<Long, Double>>() {
@@ -162,10 +159,31 @@ public class RepresentativeGraphBuilder<VV, EV> {
                 });
     }
 
+    private static class KernelVertexJoinFunction extends RichJoinFunction<Long, Tuple2<Long, Double>, Vertex<Long, Double>> {
+        final double initRank;
+        private final LongCounter vertexCounter = new LongCounter();
+
+        private KernelVertexJoinFunction(double initRank) {
+            this.initRank = initRank;
+        }
+
+        @Override
+        public void open(Configuration parameters) throws Exception {
+            super.open(parameters);
+            getRuntimeContext().addAccumulator("vertex-counter", vertexCounter);
+        }
+
+        @Override
+        public Vertex<Long, Double> join(Long id, Tuple2<Long, Double> rank) throws Exception {
+            vertexCounter.add(1);
+            return new Vertex<>(id, rank != null ? rank.f1 : initRank);
+        }
+    }
+
     private static class VertexKeySelector<K> implements KeySelector<K, K>, ResultTypeQueryable<K> {
         TypeInformation<K> type;
 
-        public VertexKeySelector(TypeInformation<K> type) {
+        private VertexKeySelector(TypeInformation<K> type) {
             this.type = type;
         }
 

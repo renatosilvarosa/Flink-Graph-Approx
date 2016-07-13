@@ -1,4 +1,4 @@
-package pt.tecnico.graph.job.pagerank;
+package pt.tecnico.graph.algorithm.pagerank;
 
 /**
  * Created by Renato on 29/06/2016.

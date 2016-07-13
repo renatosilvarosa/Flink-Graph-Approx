@@ -1,5 +1,3 @@
-package pt.tecnico.graph.job;
-
 import java.io.Serializable;
 
 /**

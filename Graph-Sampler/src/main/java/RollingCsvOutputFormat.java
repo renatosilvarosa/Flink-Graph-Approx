@@ -1,10 +1,7 @@
-package pt.tecnico.graph.output;
-
 import org.apache.flink.api.java.io.CsvOutputFormat;
 import org.apache.flink.api.java.tuple.Tuple;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
-import pt.tecnico.graph.job.TimedApproxGraphGob;
 
 import java.io.IOException;
 

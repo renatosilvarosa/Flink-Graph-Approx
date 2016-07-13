@@ -1,4 +1,4 @@
-package pt.tecnico.graph.job.pagerank;
+package pt.tecnico.graph.algorithm.pagerank;
 
 import org.apache.flink.api.common.functions.CoGroupFunction;
 import org.apache.flink.api.common.operators.Order;
@@ -15,11 +15,11 @@ import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.Vertex;
 import org.apache.flink.types.NullValue;
 import org.apache.flink.util.Collector;
-import pt.tecnico.graph.GraphUtils;
 import pt.tecnico.graph.algorithm.ApproximatedSimplePageRank;
 import pt.tecnico.graph.algorithm.SimplePageRank;
-import pt.tecnico.graph.job.DegreeTracker;
-import pt.tecnico.graph.job.StreamHandler;
+import pt.tecnico.graph.stream.GraphStreamHandler;
+import pt.tecnico.graph.stream.GraphUpdateStatistics;
+import pt.tecnico.graph.stream.GraphUpdateTracker;
 import pt.tecnico.graph.stream.StreamProvider;
 
 import java.util.*;
@@ -29,27 +29,24 @@ import java.util.stream.Stream;
 /**
  * Created by Renato on 26/06/2016.
  */
-public class ApproximatedPageRank extends StreamHandler {
-    private final DegreeTracker<Long> degreeTracker;
+public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double>> {
+    private final GraphUpdateTracker<Long> graphUpdateTracker;
     private ApproximatedPageRankConfig config;
+
     private Set<Edge<Long, NullValue>> edgesToAdd = new HashSet<>();
     private Set<Edge<Long, NullValue>> edgesToRemove = new HashSet<>();
 
     private TypeSerializerInputFormat<Tuple2<Long, Long>> edgeInputFormat;
     private TypeSerializerOutputFormat<Tuple2<Long, Long>> edgeOutputFormat;
+    private ApproximatedPageRankExecutionStatistics executionStatistics;
 
-    private TypeSerializerInputFormat<Tuple2<Long, Double>> rankInputFormat;
-    private TypeSerializerOutputFormat<Tuple2<Long, Double>> rankOutputFormat;
-
-    private DataSet<Long> updated = GraphUtils.emptyDataSet(env, Long.class);
     private int iteration = 0;
-    private String csvName = null;
+    private List<PageRankQueryListener> queryListeners = new ArrayList<>();
 
     public ApproximatedPageRank(StreamProvider<String> updateStream, Graph<Long, NullValue, NullValue> graph) {
         super(updateStream, graph);
-        this.degreeTracker = new DegreeTracker<>(graph);
+        this.graphUpdateTracker = new GraphUpdateTracker<>(graph);
     }
-
 
     @Override
     public void run() {
@@ -61,11 +58,16 @@ public class ApproximatedPageRank extends StreamHandler {
         edgeOutputFormat.setInputType(edgeTypeInfo, env.getConfig());
         edgeOutputFormat.setWriteMode(FileSystem.WriteMode.OVERWRITE);
 
+        TypeSerializerInputFormat<Tuple2<Long, Double>> rankInputFormat;
+        TypeSerializerOutputFormat<Tuple2<Long, Double>> rankOutputFormat;
         try {
             edgeOutputFormat.setOutputFilePath(new Path("./edges" + iteration));
             graph.getEdgeIds().output(edgeOutputFormat);
 
             DataSet<Tuple2<Long, Double>> ranks = graph.run(new SimplePageRank<>(config.getBeta(), 1.0, config.getIterations()));
+            executionStatistics = new ApproximatedPageRankExecutionStatistics(graph,
+                    config.getIterations(), env.getLastJobExecutionResult().getNetRuntime());
+
             rankTypeInfo = ranks.getType();
             rankInputFormat = new TypeSerializerInputFormat<>(rankTypeInfo);
 
@@ -76,8 +78,7 @@ public class ApproximatedPageRank extends StreamHandler {
 
             // iteration 0
             ranks.output(rankOutputFormat);
-            csvName = String.format("pageRank%04d.csv", iteration);
-            outputResult(csvName, ranks);
+            outputResult("pageRank", "", ranks);
 
             env.execute("First PageRank calculation");
         } catch (Exception e) {
@@ -102,36 +103,33 @@ public class ApproximatedPageRank extends StreamHandler {
                     case "Q":
                         iteration++;
                         applyUpdates();
+
+                        queryListeners.forEach(l -> l.onQuery(update, this));
+
                         String date = split[1];
 
                         DataSet<Tuple2<Long, Double>> truePR = graph.run(new SimplePageRank<>(config.getBeta(), 1.0, config.getIterations()));
-                        outputResult(String.format("true_pageRank%04d_%s.csv", iteration, date), truePR);
+                        outputResult("true_pageRank", date, truePR);
                         env.execute("True PageRank it. " + iteration);
 
                         rankInputFormat.setFilePath("ranks" + ((iteration - 1) % 5));
                         DataSet<Tuple2<Long, Double>> previousRanks = env.createInput(rankInputFormat, rankTypeInfo);
 
-                        updated = degreeTracker.allUpdatedVertexIds(EdgeDirection.ALL);
+                        Set<Long> updatedIds = graphUpdateTracker.allUpdatedVertexIds(EdgeDirection.ALL);
                         rankOutputFormat.setOutputFilePath(new Path("./ranks" + (iteration % 5)));
 
-                        if (updated.count() == 0) {
+                        if (updatedIds.isEmpty()) {
                             rankOutputFormat.setOutputFilePath(new Path("./ranks" + (iteration % 5)));
                             previousRanks.output(rankOutputFormat);
-
-                            csvName = String.format("pageRank%04d_%s.csv", iteration, date);
-                            outputResult(csvName, previousRanks);
+                            outputResult("pageRank", date, previousRanks);
                             env.execute("Approx PageRank it. " + iteration);
                             continue;
                         }
 
                         Vertex<Long, Double> bigVertex = new Vertex<>(0L, 0.0);
-                        Graph<Long, Double, Double> representativeGraph = new RepresentativeGraphBuilder<>(graph, 1.0).representativeGraph(updated, previousRanks, config.getNeighborhoodSize(), bigVertex);
-
-                        System.err.println("Iteration " + iteration);
-                        System.err.println("total vertices: " + graph.numberOfVertices());
-                        System.err.println("total edges: " + graph.numberOfEdges());
-                        System.err.println("repr. vertices: " + representativeGraph.numberOfVertices());
-                        System.err.println("repr. edges: " + representativeGraph.numberOfEdges());
+                        Graph<Long, Double, Double> representativeGraph = new RepresentativeGraphBuilder<>(graph, 1.0)
+                                .representativeGraph(env.fromCollection(updatedIds, TypeInformation.of(Long.class)),
+                                        previousRanks, config.getNeighborhoodSize(), bigVertex);
 
                         DataSet<Tuple2<Long, Double>> ranks = representativeGraph.run(new ApproximatedSimplePageRank(config.getBeta(), config.getIterations(), bigVertex.getId()));
 
@@ -157,11 +155,12 @@ public class ApproximatedPageRank extends StreamHandler {
                         rankOutputFormat.setOutputFilePath(new Path("./ranks" + (iteration % 5)));
                         newRanks.output(rankOutputFormat);
 
-                        csvName = String.format("pageRank%04d_%s.csv", iteration, date);
-                        outputResult(csvName, newRanks);
+                        outputResult("pageRank", date, newRanks);
                         env.execute("Approx PageRank it. " + iteration);
+                        executionStatistics = new ApproximatedPageRankExecutionStatistics(representativeGraph,
+                                config.getIterations(), env.getLastJobExecutionResult().getNetRuntime());
 
-                        degreeTracker.reset(updated);
+                        graphUpdateTracker.reset(updatedIds);
                         break;
                     case "END":
                         return;
@@ -172,13 +171,19 @@ public class ApproximatedPageRank extends StreamHandler {
         }
     }
 
-    private void outputResult(String path, DataSet<Tuple2<Long, Double>> ranks) {
-        ranks = ranks.sortPartition(1, Order.DESCENDING).setParallelism(1).first(config.getOutputSize());
-        if (config.isPrintRanks()) {
-            ranks.writeAsCsv(path, FileSystem.WriteMode.OVERWRITE);
-        } else {
-            ranks.project(0).writeAsCsv(path, FileSystem.WriteMode.OVERWRITE);
-        }
+    public GraphUpdateStatistics getGraphUpdateStatistics() {
+        return graphUpdateTracker.getUpdateStatistics();
+    }
+
+    public ApproximatedPageRankExecutionStatistics getLastExecutionStatistics() {
+        return executionStatistics;
+    }
+
+    private void outputResult(String name, String date, DataSet<Tuple2<Long, Double>> ranks) {
+        outputFormat.setName(name);
+        outputFormat.setIteration(iteration);
+        outputFormat.setTags(date);
+        ranks.sortPartition(1, Order.DESCENDING).setParallelism(1).first(config.getOutputSize()).output(outputFormat);
     }
 
     private void applyUpdates() throws Exception {
@@ -212,14 +217,14 @@ public class ApproximatedPageRank extends StreamHandler {
     private void registerEdgeDelete(String[] split) {
         Edge<Long, NullValue> edge = parseEdge(split);
         edgesToRemove.add(edge);
-        degreeTracker.removeEdge(edge.getSource(), edge.getTarget());
+        graphUpdateTracker.removeEdge(edge.getSource(), edge.getTarget());
     }
 
     private void registerEdgeAdd(String[] split) {
         Vertex<Long, NullValue>[] vertices = parseVertices(split);
         Edge<Long, NullValue> edge = parseEdge(split);
         edgesToAdd.add(edge);
-        degreeTracker.addEdge(vertices[0].getId(), vertices[1].getId());
+        graphUpdateTracker.addEdge(vertices[0].getId(), vertices[1].getId());
     }
 
     @SuppressWarnings("unchecked")
@@ -239,8 +244,20 @@ public class ApproximatedPageRank extends StreamHandler {
         return config;
     }
 
-    public ApproximatedPageRank setConfig(ApproximatedPageRankConfig config) {
+    public void setConfig(ApproximatedPageRankConfig config) {
         this.config = config;
-        return this;
+    }
+
+    public void addQueryListener(PageRankQueryListener listener) {
+        queryListeners.add(listener);
+    }
+
+    public void removeQueryListener(PageRankQueryListener listener) {
+        queryListeners.remove(listener);
+    }
+
+    @FunctionalInterface
+    public interface PageRankQueryListener {
+        void onQuery(String query, ApproximatedPageRank algorithm);
     }
 }

@@ -1,5 +1,3 @@
-package pt.tecnico.graph.job;
-
 import org.apache.flink.api.common.io.OutputFormat;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;

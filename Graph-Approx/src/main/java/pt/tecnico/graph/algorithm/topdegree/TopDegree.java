@@ -1,4 +1,4 @@
-package pt.tecnico.graph.job;
+package pt.tecnico.graph.algorithm.topdegree;
 
 import org.apache.flink.api.common.operators.Order;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -14,7 +14,8 @@ import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.Vertex;
 import org.apache.flink.types.LongValue;
 import org.apache.flink.types.NullValue;
-import pt.tecnico.graph.GraphUtils;
+import pt.tecnico.graph.stream.GraphStreamHandler;
+import pt.tecnico.graph.stream.GraphUpdateTracker;
 import pt.tecnico.graph.stream.StreamProvider;
 
 import java.util.ArrayList;
@@ -27,9 +28,11 @@ import java.util.stream.Stream;
 /**
  * Created by Renato on 24/06/2016.
  */
-public class TopCitedPapers extends StreamHandler {
+public class TopDegree extends GraphStreamHandler<Tuple2<Long, LongValue>> {
 
-    private DegreeTracker<Long> degreeTracker;
+    private final EdgeDirection edgeDirection;
+
+    private GraphUpdateTracker<Long> graphUpdateTracker;
 
     private Set<Edge<Long, NullValue>> edgesToAdd = new HashSet<>();
     private Set<Edge<Long, NullValue>> edgesToRemove = new HashSet<>();
@@ -38,12 +41,13 @@ public class TopCitedPapers extends StreamHandler {
     private TypeSerializerOutputFormat<Tuple2<Long, Long>> binOutputFormat;
     private DataSet<Tuple2<Long, LongValue>> topVertices = null;
     private String csvName = null;
-    private DataSet<Long> updated = GraphUtils.emptyDataSet(env, Long.class);
+    private Set<Long> updated = new HashSet<>();
     private int iteration = 0;
 
-    public TopCitedPapers(StreamProvider<String> updateStream, Graph<Long, NullValue, NullValue> graph) {
+    public TopDegree(StreamProvider<String> updateStream, Graph<Long, NullValue, NullValue> graph, EdgeDirection edgeDirection) {
         super(updateStream, graph);
-        this.degreeTracker = new DegreeTracker<>(graph);
+        this.graphUpdateTracker = new GraphUpdateTracker<>(graph);
+        this.edgeDirection = edgeDirection;
     }
 
     @Override
@@ -82,17 +86,16 @@ public class TopCitedPapers extends StreamHandler {
 
                         String date = split[1];
                         double th = Double.parseDouble(split[2]);
-                        //DataSet<Long> ids = degreeTracker.updatedAboveThresholdVertexIds(th, EdgeDirection.ALL);
-                        //degreeTracker.reset(ids);
 
-                        updated = degreeTracker.allUpdatedVertexIds(EdgeDirection.IN);
+                        updated = graphUpdateTracker.allUpdatedVertexIds(edgeDirection);
                         topVertices = queryTop(th);
 
                         csvName = "./top_" + date + "_" + th + ".csv";
                         topVertices.writeAsCsv(csvName, FileSystem.WriteMode.OVERWRITE);
+                        topVertices.output(outputFormat);
                         env.execute();
 
-                        degreeTracker.reset(updated);
+                        graphUpdateTracker.reset(updated);
                         break;
                     case "END":
                         return;
@@ -109,12 +112,12 @@ public class TopCitedPapers extends StreamHandler {
         }
 
         DataSet<Tuple2<Long, LongValue>> updatedVertices = graph.inDegrees()
-                .join(updated)
+                .join(env.fromCollection(updated, TypeInformation.of(Long.class)))
                 .where(0).equalTo(v -> v)
-                .map(v -> v.f0)
+                .with((degree, id) -> degree)
                 .returns(graph.inDegrees().getType());
 
-        Double number = degreeTracker.numberOfVertices() * th + 1;
+        Double number = graphUpdateTracker.numberOfVertices() * th + 1;
 
         return env.readCsvFile(csvName).types(Long.class, LongValue.class)
                 .union(updatedVertices)
@@ -154,14 +157,14 @@ public class TopCitedPapers extends StreamHandler {
     private void registerEdgeDelete(String[] split) {
         Edge<Long, NullValue> edge = parseEdge(split);
         edgesToRemove.add(edge);
-        degreeTracker.removeEdge(edge.getSource(), edge.getTarget());
+        graphUpdateTracker.removeEdge(edge.getSource(), edge.getTarget());
     }
 
     private void registerEdgeAdd(String[] split) {
         Vertex<Long, NullValue>[] vertices = parseVertices(split);
         Edge<Long, NullValue> edge = parseEdge(split);
         edgesToAdd.add(edge);
-        degreeTracker.addEdge(vertices[0].getId(), vertices[1].getId());
+        graphUpdateTracker.addEdge(vertices[0].getId(), vertices[1].getId());
     }
 
     private DataSet<Tuple2<Long, LongValue>> topDegree(Graph<Long, NullValue, NullValue> graph, double ratio) throws Exception {

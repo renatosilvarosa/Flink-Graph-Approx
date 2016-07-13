@@ -1,4 +1,4 @@
-package pt.tecnico.graph.generator;
+package generator;
 
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.java.DataSet;
