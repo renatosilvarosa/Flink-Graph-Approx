@@ -26,7 +26,8 @@ public abstract class GraphStreamHandler<R> implements Runnable {
         this.outputFormat = new DiscardingGraphOutputFormat<>();
     }
 
-    public void start() {
+    public void start() throws Exception {
+        init();
         new Thread(updateStream, "Stream thread").start();
         new Thread(this, "Update Graph Thread").start();
     }
@@ -34,4 +35,6 @@ public abstract class GraphStreamHandler<R> implements Runnable {
     public void setOutputFormat(GraphOutputFormat<R> outputFormat) {
         this.outputFormat = outputFormat;
     }
+
+    public abstract void init() throws Exception;
 }

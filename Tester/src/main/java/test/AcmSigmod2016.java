@@ -8,20 +8,20 @@ import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRankConfig;
 import pt.tecnico.graph.algorithm.pagerank.PageRankCsvOutputFormat;
 import pt.tecnico.graph.stream.SocketStreamProvider;
 
-import java.time.LocalDateTime;
-
 /**
  * Created by Renato on 09/04/2016.
  */
-public class Main {
+public class AcmSigmod2016 {
     public static void main(String[] args) {
         //ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
         ExecutionEnvironment env = ExecutionEnvironment.createRemoteEnvironment("localhost", 6123,
                 "flink-graph-approx-0.1.jar", "flink-graph-algorithms-0.1.jar"
         );
-        env.getConfig().disableSysoutLogging().setParallelism(1);
+        env.getConfig()
+                .disableSysoutLogging()
+                .setParallelism(1);
         try {
-            Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader("D:/Documents/Dissertação/Datasets/Cit-HepPh/Cit-HepPh-init.txt", env)
+            Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader("D:/Documents/Dissertação/Datasets/test-harness/init-file.txt", env)
                     .ignoreCommentsEdges("#")
                     .fieldDelimiterEdges("\t")
                     .keyType(Long.class);
@@ -29,11 +29,10 @@ public class Main {
             ApproximatedPageRankConfig config = new ApproximatedPageRankConfig().setBeta(0.85).setIterations(20)
                     .setNeighborhoodSize(1).setOutputSize(1000);
 
-            LocalDateTime.now();
-            PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat("D:/Documents/Dissertação/Results/", System.lineSeparator(), ";", false, true);
+            PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat("D:/Documents/Dissertação/Results/AcmSigmod2016/", System.lineSeparator(), ";", false, true);
             outputFormat.setName("pageRank");
 
-            ApproximatedPageRank approximatedPageRank = new ApproximatedPageRank(new SocketStreamProvider<>("localhost", 1234, s -> s),
+            ApproximatedPageRank approximatedPageRank = new ApproximatedPageRank(new SocketStreamProvider<>("localhost", 5678, s -> s),
                     graph);
             approximatedPageRank.setConfig(config);
             approximatedPageRank.setOutputFormat(outputFormat);
@@ -65,6 +64,7 @@ public class Main {
                 return ApproximatedPageRank.DeciderResponse.COMPUTE_APPROXIMATE;
 
             });
+
 
             approximatedPageRank.start();
 

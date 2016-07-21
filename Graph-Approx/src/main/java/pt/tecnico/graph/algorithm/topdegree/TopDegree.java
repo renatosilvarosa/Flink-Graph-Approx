@@ -52,21 +52,6 @@ public class TopDegree extends GraphStreamHandler<Tuple2<Long, LongValue>> {
 
     @Override
     public void run() {
-        TypeInformation<Tuple2<Long, Long>> edgeTypeInfo = graph.getEdgeIds().getType();
-        binInputFormat = new TypeSerializerInputFormat<>(edgeTypeInfo);
-
-        binOutputFormat = new TypeSerializerOutputFormat<>();
-        binOutputFormat.setInputType(edgeTypeInfo, env.getConfig());
-        binOutputFormat.setWriteMode(FileSystem.WriteMode.OVERWRITE);
-
-        try {
-            binOutputFormat.setOutputFilePath(new Path("./edges" + iteration));
-            graph.getEdgeIds().output(binOutputFormat);
-            env.execute();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
         while (true) {
             try {
                 String update = pendingUpdates.take();
@@ -183,5 +168,19 @@ public class TopDegree extends GraphStreamHandler<Tuple2<Long, LongValue>> {
     private Edge<Long, NullValue> parseEdge(String[] data) {
         assert data.length == 3;
         return new Edge<>(Long.valueOf(data[1]), Long.valueOf(data[2]), NullValue.getInstance());
+    }
+
+    @Override
+    public void init() throws Exception {
+        TypeInformation<Tuple2<Long, Long>> edgeTypeInfo = graph.getEdgeIds().getType();
+        binInputFormat = new TypeSerializerInputFormat<>(edgeTypeInfo);
+
+        binOutputFormat = new TypeSerializerOutputFormat<>();
+        binOutputFormat.setInputType(edgeTypeInfo, env.getConfig());
+        binOutputFormat.setWriteMode(FileSystem.WriteMode.OVERWRITE);
+
+        binOutputFormat.setOutputFilePath(new Path("./edges" + iteration));
+        graph.getEdgeIds().output(binOutputFormat);
+        env.execute();
     }
 }

@@ -42,6 +42,9 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
 
     private int iteration = 0;
     private PageRankQueryDecider decider;
+    private TypeSerializerInputFormat<Tuple2<Long, Double>> rankInputFormat;
+    private TypeSerializerOutputFormat<Tuple2<Long, Double>> rankOutputFormat;
+    private TypeInformation<Tuple2<Long, Double>> rankTypeInfo;
 
     public ApproximatedPageRank(StreamProvider<String> updateStream, Graph<Long, NullValue, NullValue> graph) {
         super(updateStream, graph);
@@ -49,41 +52,40 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
     }
 
     @Override
-    public void run() {
+    public void init() throws Exception {
         TypeInformation<Tuple2<Long, Long>> edgeTypeInfo = graph.getEdgeIds().getType();
-        TypeInformation<Tuple2<Long, Double>> rankTypeInfo;
         edgeInputFormat = new TypeSerializerInputFormat<>(edgeTypeInfo);
 
         edgeOutputFormat = new TypeSerializerOutputFormat<>();
         edgeOutputFormat.setInputType(edgeTypeInfo, env.getConfig());
         edgeOutputFormat.setWriteMode(FileSystem.WriteMode.OVERWRITE);
 
-        TypeSerializerInputFormat<Tuple2<Long, Double>> rankInputFormat;
-        TypeSerializerOutputFormat<Tuple2<Long, Double>> rankOutputFormat;
-        try {
-            edgeOutputFormat.setOutputFilePath(new Path("./edges" + iteration));
-            graph.getEdgeIds().output(edgeOutputFormat);
+        edgeOutputFormat.setOutputFilePath(new Path("./edges" + iteration));
+        graph.getEdgeIds().output(edgeOutputFormat);
 
-            DataSet<Tuple2<Long, Double>> ranks = computeExact();
+        env.execute("Original graph reading");
 
-            rankTypeInfo = ranks.getType();
-            rankInputFormat = new TypeSerializerInputFormat<>(rankTypeInfo);
+        DataSet<Tuple2<Long, Double>> ranks = computeExact();
 
-            rankOutputFormat = new TypeSerializerOutputFormat<>();
-            rankOutputFormat.setInputType(rankTypeInfo, env.getConfig());
-            rankOutputFormat.setWriteMode(FileSystem.WriteMode.OVERWRITE);
-            rankOutputFormat.setOutputFilePath(new Path("./ranks" + iteration));
+        rankTypeInfo = ranks.getType();
+        rankInputFormat = new TypeSerializerInputFormat<>(rankTypeInfo);
+        rankOutputFormat = new TypeSerializerOutputFormat<>();
+        rankOutputFormat.setInputType(rankTypeInfo, env.getConfig());
+        rankOutputFormat.setWriteMode(FileSystem.WriteMode.OVERWRITE);
+        rankOutputFormat.setOutputFilePath(new Path("./ranks" + iteration));
 
-            // iteration 0
-            ranks.output(rankOutputFormat);
-            outputResult("", ranks);
+        // iteration 0
+        ranks.output(rankOutputFormat);
+        outputResult("", ranks);
+        env.execute("First PageRank calculation");
 
-            env.execute("First PageRank calculation");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return;
-        }
+        executionStatistics = new ApproximatedPageRankExecutionStatistics(graph,
+                config.getIterations(), env.getLastJobExecutionResult().getNetRuntime());
+        graphUpdateTracker.resetAll();
+    }
 
+    @Override
+    public void run() {
         while (true) {
             try {
                 String update = pendingUpdates.take();
@@ -125,6 +127,8 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
                         newRanks.output(rankOutputFormat);
 
                         env.execute("Approx PageRank it. " + iteration);
+                        executionStatistics = new ApproximatedPageRankExecutionStatistics(graph,
+                                config.getIterations(), env.getLastJobExecutionResult().getNetRuntime());
                         break;
                     case "END":
                         return;
@@ -136,11 +140,7 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
     }
 
     private DataSet<Tuple2<Long, Double>> computeExact() throws Exception {
-        DataSet<Tuple2<Long, Double>> ranks = graph.run(new SimplePageRank<>(config.getBeta(), 1.0, config.getIterations()));
-        executionStatistics = new ApproximatedPageRankExecutionStatistics(graph,
-                config.getIterations(), env.getLastJobExecutionResult().getNetRuntime());
-        graphUpdateTracker.resetAll();
-        return ranks;
+        return graph.run(new SimplePageRank<>(config.getBeta(), 1.0, config.getIterations()));
     }
 
     private DataSet<Tuple2<Long, Double>> computeApproximate(DataSet<Tuple2<Long, Double>> previousRanks) throws Exception {
@@ -173,8 +173,6 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
                 });
 
         graphUpdateTracker.reset(updatedIds);
-        executionStatistics = new ApproximatedPageRankExecutionStatistics(representativeGraph,
-                config.getIterations(), env.getLastJobExecutionResult().getNetRuntime());
         return newRanks;
     }
 
