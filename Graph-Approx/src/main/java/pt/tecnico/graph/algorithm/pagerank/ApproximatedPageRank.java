@@ -30,7 +30,7 @@ import java.util.stream.Stream;
  * Created by Renato on 26/06/2016.
  */
 public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double>> {
-    private final GraphUpdateTracker<Long> graphUpdateTracker;
+    private GraphUpdateTracker<Long> graphUpdateTracker;
     private ApproximatedPageRankConfig config;
 
     private Set<Edge<Long, NullValue>> edgesToAdd = new HashSet<>();
@@ -48,11 +48,12 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
 
     public ApproximatedPageRank(StreamProvider<String> updateStream, Graph<Long, NullValue, NullValue> graph) {
         super(updateStream, graph);
-        this.graphUpdateTracker = new GraphUpdateTracker<>(graph);
     }
 
     @Override
     public void init() throws Exception {
+        graphUpdateTracker = new GraphUpdateTracker<>(graph);
+
         TypeInformation<Tuple2<Long, Long>> edgeTypeInfo = graph.getEdgeIds().getType();
         edgeInputFormat = new TypeSerializerInputFormat<>(edgeTypeInfo);
 
@@ -104,7 +105,7 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
                         iteration++;
                         applyUpdates();
 
-                        String date = split[1];
+                        String tag = split.length > 1 ? split[1] : "";
 
                         rankInputFormat.setFilePath("ranks" + ((iteration - 1) % 5));
                         DataSet<Tuple2<Long, Double>> previousRanks = env.createInput(rankInputFormat, rankTypeInfo);
@@ -123,7 +124,7 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
                         }
 
                         assert newRanks != null : "Ranks are null";
-                        outputResult(date, newRanks);
+                        outputResult(tag, newRanks);
                         newRanks.output(rankOutputFormat);
 
                         env.execute("Approx PageRank it. " + iteration);

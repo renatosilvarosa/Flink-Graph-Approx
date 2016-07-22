@@ -14,11 +14,11 @@ import pt.tecnico.graph.stream.SocketStreamProvider;
 public class AcmSigmod2016 {
     public static void main(String[] args) {
         //ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-        ExecutionEnvironment env = ExecutionEnvironment.createRemoteEnvironment("localhost", 6123,
+        ExecutionEnvironment env = ExecutionEnvironment.createRemoteEnvironment("146.193.41.145", 6123,
                 "flink-graph-approx-0.1.jar", "flink-graph-algorithms-0.1.jar"
         );
         env.getConfig()
-                .disableSysoutLogging()
+                //.disableSysoutLogging()
                 .setParallelism(1);
         try {
             Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader("D:/Documents/Dissertação/Datasets/test-harness/init-file.txt", env)
@@ -29,10 +29,10 @@ public class AcmSigmod2016 {
             ApproximatedPageRankConfig config = new ApproximatedPageRankConfig().setBeta(0.85).setIterations(20)
                     .setNeighborhoodSize(1).setOutputSize(1000);
 
-            PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat("D:/Documents/Dissertação/Results/AcmSigmod2016/", System.lineSeparator(), ";", false, true);
+            PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat("~/Results/AcmSigmod2016/", System.lineSeparator(), ";", false, true);
             outputFormat.setName("pageRank");
 
-            ApproximatedPageRank approximatedPageRank = new ApproximatedPageRank(new SocketStreamProvider<>("localhost", 5678, s -> s),
+            ApproximatedPageRank approximatedPageRank = new ApproximatedPageRank(new SocketStreamProvider<>("146.193.41.145", 5678, s -> s),
                     graph);
             approximatedPageRank.setConfig(config);
             approximatedPageRank.setOutputFormat(outputFormat);

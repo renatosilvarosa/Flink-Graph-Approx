@@ -16,12 +16,12 @@ import java.time.LocalDateTime;
 public class CitHepPh {
     public static void main(String[] args) {
         //ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-        ExecutionEnvironment env = ExecutionEnvironment.createRemoteEnvironment("localhost", 6123,
+        ExecutionEnvironment env = ExecutionEnvironment.createRemoteEnvironment("146.193.41.145", 6123,
                 "flink-graph-approx-0.1.jar", "flink-graph-algorithms-0.1.jar"
         );
         env.getConfig().disableSysoutLogging().setParallelism(1);
         try {
-            Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader("D:/Documents/Dissertação/Datasets/Cit-HepPh/Cit-HepPh-init.txt", env)
+            Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader("/home/rrosa/Datasets/Cit-HepPh/Cit-HepPh-init.txt", env)
                     .ignoreCommentsEdges("#")
                     .fieldDelimiterEdges("\t")
                     .keyType(Long.class);
@@ -30,7 +30,7 @@ public class CitHepPh {
                     .setNeighborhoodSize(1).setOutputSize(1000);
 
             LocalDateTime.now();
-            PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat("D:/Documents/Dissertação/Results/", System.lineSeparator(), ";", false, true);
+            PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat("/home/rrosa/Results/CitHepPh", System.lineSeparator(), ";", false, true);
             outputFormat.setName("pageRank");
 
             ApproximatedPageRank approximatedPageRank = new ApproximatedPageRank(new SocketStreamProvider<>("localhost", 1234, s -> s),
