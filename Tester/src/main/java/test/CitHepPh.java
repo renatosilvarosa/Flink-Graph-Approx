@@ -8,8 +8,6 @@ import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRankConfig;
 import pt.tecnico.graph.algorithm.pagerank.PageRankCsvOutputFormat;
 import pt.tecnico.graph.stream.SocketStreamProvider;
 
-import java.time.LocalDateTime;
-
 /**
  * Created by Renato on 09/04/2016.
  */
@@ -29,7 +27,6 @@ public class CitHepPh {
             ApproximatedPageRankConfig config = new ApproximatedPageRankConfig().setBeta(0.85).setIterations(20)
                     .setNeighborhoodSize(1).setOutputSize(1000);
 
-            LocalDateTime.now();
             PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat("/home/rrosa/Results/CitHepPh", System.lineSeparator(), ";", false, true);
             outputFormat.setName("pageRank");
 

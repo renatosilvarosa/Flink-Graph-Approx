@@ -2,6 +2,7 @@ package pt.tecnico.graph.algorithm;
 
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.DataSet;
+import org.apache.flink.api.java.functions.FunctionAnnotation;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.graph.*;
 import org.apache.flink.graph.spargel.GatherFunction;
@@ -46,12 +47,7 @@ public class SimplePageRank<K, VV, EV> implements GraphAlgorithm<K, VV, EV, Data
                 .joinWithEdgesOnSource(vertexOutDegrees, new InitWeights());
 
         if (initialRanks != null) {
-            g = g.joinWithVertices(initialRanks, new VertexJoinFunction<Double, Double>() {
-                @Override
-                public Double vertexJoin(Double vertexValue, Double inputValue) throws Exception {
-                    return inputValue;
-                }
-            });
+            g = g.joinWithVertices(initialRanks, new RanksJoinFunction());
         }
 
         ScatterGatherConfiguration conf = new ScatterGatherConfiguration();
@@ -59,6 +55,21 @@ public class SimplePageRank<K, VV, EV> implements GraphAlgorithm<K, VV, EV, Data
         conf.setDirection(EdgeDirection.OUT);
         return g.runScatterGatherIteration(new RankMessenger(), new VertexRankUpdater(), iterations, conf)
                 .getVerticesAsTuple2();
+    }
+
+    @FunctionAnnotation.ForwardedFieldsFirst("*->*")
+    private static class RanksJoinFunction implements VertexJoinFunction<Double, Double> {
+        @Override
+        public Double vertexJoin(Double vertexValue, Double inputValue) throws Exception {
+            return inputValue;
+        }
+    }
+
+    private static class InitWeights implements EdgeJoinFunction<Double, LongValue> {
+        @Override
+        public Double edgeJoin(Double edgeValue, LongValue inputValue) {
+            return edgeValue / (double) inputValue.getValue();
+        }
     }
 
     private class VertexRankUpdater extends GatherFunction<K, Double, Double> {
@@ -97,13 +108,6 @@ public class SimplePageRank<K, VV, EV> implements GraphAlgorithm<K, VV, EV, Data
         @Override
         public Double map(Edge<K, EV> value) throws Exception {
             return 1.0;
-        }
-    }
-
-    private class InitWeights implements EdgeJoinFunction<Double, LongValue> {
-        @Override
-        public Double edgeJoin(Double edgeValue, LongValue inputValue) {
-            return edgeValue / (double) inputValue.getValue();
         }
     }
 }

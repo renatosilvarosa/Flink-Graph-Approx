@@ -1,12 +1,12 @@
 package pt.tecnico.graph.algorithm.pagerank;
 
 import org.apache.flink.api.common.accumulators.LongCounter;
-import org.apache.flink.api.common.functions.CoGroupFunction;
-import org.apache.flink.api.common.functions.JoinFunction;
 import org.apache.flink.api.common.functions.RichJoinFunction;
+import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.aggregation.Aggregations;
+import org.apache.flink.api.java.functions.FunctionAnnotation;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
@@ -23,6 +23,10 @@ import org.apache.flink.util.Collector;
 public class RepresentativeGraphBuilder<VV, EV> {
 
     private static final VertexKeySelector<Long> keySelector = new VertexKeySelector<>(TypeInformation.of(Long.class));
+    private static final TypeInformation<Edge<Long, Double>> edgeTypeInfo = TypeInformation.of(new TypeHint<Edge<Long, Double>>() {
+    });
+    private static final TypeInformation<Tuple2<Long, Double>> tuple2TypeInfo = TypeInformation.of(new TypeHint<Tuple2<Long, Double>>() {
+    });
     private final Graph<Long, VV, EV> originalGraph;
     private final double initialRank;
 
@@ -49,14 +53,12 @@ public class RepresentativeGraphBuilder<VV, EV> {
         DataSet<Edge<Long, Double>> internalEdges = selectEdges(kernelVertices)
                 .join(outDegrees)
                 .where(0).equalTo(0)
-                .with(new JoinFunction<Edge<Long, Double>, Tuple2<Long, LongValue>, Edge<Long, Double>>() {
-                    @Override
-                    public Edge<Long, Double> join(Edge<Long, Double> edge, Tuple2<Long, LongValue> degree) throws Exception {
-                        assert degree.f1.getValue() > 0;
-                        edge.setValue(1.0 / degree.f1.getValue());
-                        return edge;
-                    }
-                });
+                .with((edge, degree) -> {
+                    assert degree.f1.getValue() > 0;
+                    edge.setValue(1.0 / degree.f1.getValue());
+                    return edge;
+                }).returns(edgeTypeInfo)
+                .withForwardedFieldsFirst("f0;f1");
 
         // Select all the other edges, converted to the correct type
         DataSet<Edge<Long, Double>> externalEdges = externalEdges(internalEdges);
@@ -64,36 +66,27 @@ public class RepresentativeGraphBuilder<VV, EV> {
         // Calculate the ranks to be sent by the big vertex.
         DataSet<Tuple2<Long, Double>> ranksToSend = previousRanks.join(outDegrees)
                 .where(0).equalTo(0)
-                .with(new JoinFunction<Tuple2<Long, Double>, Tuple2<Long, LongValue>, Tuple2<Long, Double>>() {
-                    @Override
-                    public Tuple2<Long, Double> join(Tuple2<Long, Double> rank, Tuple2<Long, LongValue> degree) throws Exception {
-                        if (degree.f1.getValue() > 0) {
-                            return Tuple2.of(rank.f0, rank.f1 / degree.f1.getValue());
-                        }
-                        return Tuple2.of(rank.f0, 0.0);
-                    }
-                });
+                .with((rank, degree) -> degree.f1.getValue() > 0 ?
+                        Tuple2.of(rank.f0, rank.f1 / degree.f1.getValue()) : Tuple2.of(rank.f0, 0.0))
+                .returns(tuple2TypeInfo)
+                .withForwardedFieldsFirst("f0");
 
         // For each edge, the rank sent is (rank of original vertex)/(out degree of original vertex)
         DataSet<Edge<Long, Double>> edgesToInside = externalEdges
                 .join(kernelVertices)
                 .where(1).equalTo(0)
-                .with(new JoinFunction<Edge<Long, Double>, Vertex<Long, Double>, Edge<Long, Double>>() {
-                    @Override
-                    public Edge<Long, Double> join(Edge<Long, Double> e, Vertex<Long, Double> v) throws Exception {
-                        return e;
-                    }
-                })
+                .with((e, v) -> e)
+                .returns(edgeTypeInfo)
+                .withForwardedFieldsFirst("*->*")
                 .join(ranksToSend)
                 .where(0).equalTo(0)
-                .with(new JoinFunction<Edge<Long, Double>, Tuple2<Long, Double>, Edge<Long, Double>>() {
-                    @Override
-                    public Edge<Long, Double> join(Edge<Long, Double> edge, Tuple2<Long, Double> rank) throws Exception {
-                        edge.setSource(bigVertex.getId());
-                        edge.setValue(rank.f1);
-                        return edge;
-                    }
-                })
+                .with((edge, rank) -> {
+                    edge.setSource(bigVertex.getId());
+                    edge.setValue(rank.f1);
+                    return edge;
+                }).returns(edgeTypeInfo)
+                .withForwardedFieldsFirst("f1")
+                .withForwardedFieldsSecond("f1->f2")
                 .groupBy(0, 1)
                 .aggregate(Aggregations.SUM, 2);
 
@@ -114,7 +107,8 @@ public class RepresentativeGraphBuilder<VV, EV> {
                     .join(originalGraph.getEdges())
                     .where(keySelector).equalTo(0)
                     .with((id, e) -> e.getTarget())
-                    .returns(expandedIds.getType());
+                    .returns(expandedIds.getType())
+                    .withForwardedFieldsSecond("f1->*");
 
             expandedIds = expandedIds.union(firstNeighbours).distinct();
             level--;
@@ -127,38 +121,30 @@ public class RepresentativeGraphBuilder<VV, EV> {
         return vertices
                 .joinWithHuge(originalGraph.getEdges())
                 .where(0).equalTo(0)
-                .with(new JoinFunction<Vertex<Long, Double>, Edge<Long, EV>, Edge<Long, EV>>() {
-                    @Override
-                    public Edge<Long, EV> join(Vertex<Long, Double> source, Edge<Long, EV> edge) throws Exception {
-                        return edge;
-                    }
-                })
+                .with((source, edge) -> edge)
+                .returns(originalGraph.getEdges().getType())
+                .withForwardedFieldsSecond("*->*")
                 .join(vertices)
                 .where(1).equalTo(0)
-                .with(new JoinFunction<Edge<Long, EV>, Vertex<Long, Double>, Edge<Long, Double>>() {
-                    @Override
-                    public Edge<Long, Double> join(Edge<Long, EV> e, Vertex<Long, Double> v) throws Exception {
-                        return new Edge<>(e.getSource(), e.getTarget(), 0.0);
-                    }
-                })
+                .with((e, v) -> new Edge<>(e.getSource(), e.getTarget(), 0.0))
+                .returns(edgeTypeInfo)
+                .withForwardedFieldsFirst("f0;f1")
                 .distinct(0, 1);
     }
 
     private DataSet<Edge<Long, Double>> externalEdges(DataSet<Edge<Long, Double>> edgesToBeRemoved) {
         return originalGraph.getEdges().coGroup(edgesToBeRemoved)
                 .where(0, 1).equalTo(0, 1)
-                .with(new CoGroupFunction<Edge<Long, EV>, Edge<Long, Double>, Edge<Long, Double>>() {
-                    @Override
-                    public void coGroup(Iterable<Edge<Long, EV>> edge, Iterable<Edge<Long, Double>> edgeToBeRemoved, Collector<Edge<Long, Double>> out) throws Exception {
-                        if (!edgeToBeRemoved.iterator().hasNext()) {
-                            for (Edge<Long, EV> next : edge) {
-                                out.collect(new Edge<>(next.getSource(), next.getTarget(), 0.0));
-                            }
+                .with((Iterable<Edge<Long, EV>> edge, Iterable<Edge<Long, Double>> edgeToBeRemoved, Collector<Edge<Long, Double>> out) -> {
+                    if (!edgeToBeRemoved.iterator().hasNext()) {
+                        for (Edge<Long, EV> next : edge) {
+                            out.collect(new Edge<>(next.getSource(), next.getTarget(), 0.0));
                         }
                     }
-                });
+                }).returns(edgeTypeInfo);
     }
 
+    @FunctionAnnotation.ForwardedFieldsFirst("*->f0")
     private static class KernelVertexJoinFunction extends RichJoinFunction<Long, Tuple2<Long, Double>, Vertex<Long, Double>> {
         final double initRank;
         private final LongCounter vertexCounter = new LongCounter();

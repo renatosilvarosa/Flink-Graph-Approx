@@ -1,7 +1,7 @@
 package pt.tecnico.graph.algorithm.pagerank;
 
-import org.apache.flink.api.common.functions.CoGroupFunction;
 import org.apache.flink.api.common.operators.Order;
+import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.io.TypeSerializerInputFormat;
@@ -61,7 +61,7 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
         edgeOutputFormat.setInputType(edgeTypeInfo, env.getConfig());
         edgeOutputFormat.setWriteMode(FileSystem.WriteMode.OVERWRITE);
 
-        edgeOutputFormat.setOutputFilePath(new Path("./edges" + iteration));
+        edgeOutputFormat.setOutputFilePath(new Path("cache/edges" + iteration));
         graph.getEdgeIds().output(edgeOutputFormat);
 
         env.execute("Original graph reading");
@@ -73,7 +73,7 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
         rankOutputFormat = new TypeSerializerOutputFormat<>();
         rankOutputFormat.setInputType(rankTypeInfo, env.getConfig());
         rankOutputFormat.setWriteMode(FileSystem.WriteMode.OVERWRITE);
-        rankOutputFormat.setOutputFilePath(new Path("./ranks" + iteration));
+        rankOutputFormat.setOutputFilePath(new Path("cache/ranks" + iteration));
 
         // iteration 0
         ranks.output(rankOutputFormat);
@@ -107,12 +107,12 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
 
                         String tag = split.length > 1 ? split[1] : "";
 
-                        rankInputFormat.setFilePath("ranks" + ((iteration - 1) % 5));
+                        rankInputFormat.setFilePath("cache/ranks" + ((iteration - 1) % 5));
                         DataSet<Tuple2<Long, Double>> previousRanks = env.createInput(rankInputFormat, rankTypeInfo);
 
                         DeciderResponse response = decider.onQuery(update, this);
 
-                        rankOutputFormat.setOutputFilePath(new Path("./ranks" + (iteration % 5)));
+                        rankOutputFormat.setOutputFilePath(new Path("cache/ranks" + (iteration % 5)));
 
                         DataSet<Tuple2<Long, Double>> newRanks = null;
                         if (response == DeciderResponse.REPEAT_LAST_ANSWER) {
@@ -153,28 +153,25 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
                         previousRanks, config.getNeighborhoodSize(), bigVertex);
 
         DataSet<Tuple2<Long, Double>> ranks = representativeGraph.run(new SummarizedGraphPageRank(config.getBeta(), config.getIterations(), bigVertex.getId()));
-
-        DataSet<Tuple2<Long, Double>> newRanks = previousRanks.coGroup(ranks)
+        ranks = previousRanks.coGroup(ranks)
                 .where(0).equalTo(0)
-                .with(new CoGroupFunction<Tuple2<Long, Double>, Tuple2<Long, Double>, Tuple2<Long, Double>>() {
-                    @Override
-                    public void coGroup(Iterable<Tuple2<Long, Double>> previous, Iterable<Tuple2<Long, Double>> newRanks, Collector<Tuple2<Long, Double>> out) throws Exception {
-                        Iterator<Tuple2<Long, Double>> prevIt = previous.iterator();
-                        Iterator<Tuple2<Long, Double>> newIt = newRanks.iterator();
+                .with((Iterable<Tuple2<Long, Double>> previous, Iterable<Tuple2<Long, Double>> newRanks, Collector<Tuple2<Long, Double>> out) -> {
+                    Iterator<Tuple2<Long, Double>> prevIt = previous.iterator();
+                    Iterator<Tuple2<Long, Double>> newIt = newRanks.iterator();
 
-                        if (newIt.hasNext()) {
-                            Tuple2<Long, Double> next = newIt.next();
-                            if (!next.f0.equals(bigVertex.getId())) {
-                                out.collect(next);
-                            }
-                        } else if (prevIt.hasNext()) {
-                            out.collect(prevIt.next());
+                    if (newIt.hasNext()) {
+                        Tuple2<Long, Double> next = newIt.next();
+                        if (!next.f0.equals(bigVertex.getId())) {
+                            out.collect(next);
                         }
+                    } else if (prevIt.hasNext()) {
+                        out.collect(prevIt.next());
                     }
-                });
+                }).returns(new TypeHint<Tuple2<Long, Double>>() {
+                }).withForwardedFieldsFirst("f0;f1");
 
         graphUpdateTracker.reset(updatedIds);
-        return newRanks;
+        return ranks;
     }
 
     public GraphUpdateStatistics getGraphUpdateStatistics() {
@@ -192,7 +189,7 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
     }
 
     private void applyUpdates() throws Exception {
-        edgeInputFormat.setFilePath("./edges" + ((iteration - 1) % 5));
+        edgeInputFormat.setFilePath("cache/edges" + ((iteration - 1) % 5));
         graph = Graph.fromTuple2DataSet(env.createInput(edgeInputFormat), env);
 
         if (!edgesToAdd.isEmpty()) {
@@ -211,7 +208,7 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
             graph = graph.removeEdges(new ArrayList<>(edgesToRemove));
         }
 
-        edgeOutputFormat.setOutputFilePath(new Path("./edges" + (iteration % 5)));
+        edgeOutputFormat.setOutputFilePath(new Path("cache/edges" + (iteration % 5)));
         graph.getEdgeIds().output(edgeOutputFormat);
         env.execute("Apply updates it. " + iteration);
 
