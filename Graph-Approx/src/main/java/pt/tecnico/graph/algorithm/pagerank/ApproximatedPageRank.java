@@ -74,7 +74,12 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
 
     @Override
     public void run() {
-        observer.onStart();
+        try {
+            observer.onStart();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return;
+        }
 
         while (true) {
             try {

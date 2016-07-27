@@ -47,7 +47,7 @@ public class PolBlogs {
             approximatedPageRank.setOutputFormat(outputFormat);
 
             String dir = localDir + "/Statistics/polblogs";
-            approximatedPageRank.setObserver(args[5].equals("exact") ? new ExactPRStatistics(dir) : new ApproximatePRStatistics(dir));
+            approximatedPageRank.setObserver(args[5].equals("exact") ? new ExactPRStatistics(dir, args[6]) : new ApproximatedPRStatistics(dir, args[6]));
 
             approximatedPageRank.start();
 

@@ -11,7 +11,7 @@ import pt.tecnico.graph.stream.GraphUpdateTracker;
  * Created by Renato on 26/07/2016.
  */
 public interface PageRankQueryObserver {
-    void onStart();
+    void onStart() throws Exception;
 
     ApproximatedPageRank.DeciderResponse onQuery(int id, String query, Graph<Long, NullValue, NullValue> graph, GraphUpdateTracker<Long, NullValue, NullValue> updateTracker);
 
@@ -19,5 +19,5 @@ public interface PageRankQueryObserver {
                        Graph<Long, Double, Double> summaryGraph, DataSet<Tuple2<Long, Double>> result,
                        JobExecutionResult jobExecutionResult);
 
-    void onStop();
+    void onStop() throws Exception;
 }

@@ -35,7 +35,7 @@ public class CitHepPh {
             approximatedPageRank.setConfig(config);
             approximatedPageRank.setOutputFormat(outputFormat);
 
-            approximatedPageRank.setObserver(new ApproximatePRStatistics("/home/rrosa/Statistics/Cit-HepPh"));
+            approximatedPageRank.setObserver(new ApproximatedPRStatistics("/home/rrosa/Statistics/Cit-HepPh", null));
 
             approximatedPageRank.start();
 
