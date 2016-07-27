@@ -18,12 +18,12 @@ import java.nio.file.Paths;
 /**
  * Created by Renato on 26/07/2016.
  */
-class ApproximatePRStatistics implements PageRankQueryObserver {
+class ExactPRStatistics implements PageRankQueryObserver {
 
     private final String dir;
     private PrintStream printStream;
 
-    ApproximatePRStatistics(String dir) {
+    ExactPRStatistics(String dir) {
         this.dir = dir;
     }
 
@@ -33,12 +33,12 @@ class ApproximatePRStatistics implements PageRankQueryObserver {
         try {
             Path dirs = Files.createDirectories(Paths.get(dir));
 
-            Path file = dirs.resolve("approx-pr-time.csv");
+            Path file = dirs.resolve("exact-pr-time.csv");
             if (!Files.exists(file)) {
                 file = Files.createFile(file);
             }
             printStream = new PrintStream(file.toString());
-            printStream.println("iteration;nVertices;nEdges;nSummVertices;nSummEdges;time");
+            printStream.println("iteration;nVertices;nEdges;time");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -46,7 +46,7 @@ class ApproximatePRStatistics implements PageRankQueryObserver {
 
     @Override
     public ApproximatedPageRank.DeciderResponse onQuery(int id, String query, Graph<Long, NullValue, NullValue> graph, GraphUpdateTracker<Long, NullValue, NullValue> updateTracker) {
-        return ApproximatedPageRank.DeciderResponse.COMPUTE_APPROXIMATE;
+        return ApproximatedPageRank.DeciderResponse.COMPUTE_EXACT;
     }
 
     @Override
@@ -56,10 +56,8 @@ class ApproximatePRStatistics implements PageRankQueryObserver {
         try {
             long nVertices = graph.numberOfVertices();
             long nEdges = graph.numberOfEdges();
-            long summVertices = summaryGraph.numberOfVertices();
-            long summEdges = summaryGraph.numberOfEdges();
 
-            printStream.format("%d;%d;%d;%d;%d;%d%n", id, nVertices, nEdges, summVertices, summEdges, jobExecutionResult.getNetRuntime());
+            printStream.format("%d;%d;%d;%d%n", id, nVertices, nEdges, jobExecutionResult.getNetRuntime());
             printStream.flush();
 
         } catch (Exception e) {
