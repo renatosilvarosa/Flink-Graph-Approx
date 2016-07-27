@@ -28,40 +28,14 @@ public class CitHepPh {
                     .setNeighborhoodSize(1).setOutputSize(1000);
 
             PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat("/home/rrosa/Results/CitHepPh", System.lineSeparator(), ";", false, true);
-            outputFormat.setName("pageRank");
+            outputFormat.setName("approx_pageRank");
 
-            ApproximatedPageRank approximatedPageRank = new ApproximatedPageRank(new SocketStreamProvider<>("localhost", 1234, s -> s),
+            ApproximatedPageRank approximatedPageRank = new ApproximatedPageRank(new SocketStreamProvider("localhost", 1234),
                     graph);
             approximatedPageRank.setConfig(config);
             approximatedPageRank.setOutputFormat(outputFormat);
 
-            approximatedPageRank.setDecider((query, algorithm) -> {
-/*                ApproximatedPageRankExecutionStatistics lastExecutionStatistics = algorithm.getLastExecutionStatistics();
-                try {
-                    System.err.println("\tSummary vertices: " + lastExecutionStatistics.getNumberOfSummaryVertices());
-                    System.err.println("\tSummary edges: " + lastExecutionStatistics.getNumberOfSummaryEdges());
-                    System.err.println("\tPR iterations: " + lastExecutionStatistics.getNumberOfIterations());
-                    System.err.println("\tExecution time: " + lastExecutionStatistics.getExecutionTime());
-                    System.err.println();
-                    System.err.println();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-                System.err.println(query);
-
-                GraphUpdateStatistics updateStatistics = algorithm.getGraphUpdateStatistics();
-                System.err.println("\tAdded vertices: " + updateStatistics.getAddedVertices());
-                System.err.println("\tRemoved vertices: " + updateStatistics.getRemovedVertices());
-                System.err.println("\tAdded edges: " + updateStatistics.getAddedEdges());
-                System.err.println("\tRemoved vertices: " + updateStatistics.getRemovedEdges());
-                System.err.println("\tUpdated vertices: " + updateStatistics.getUpdatedVertices());
-                System.err.println("\tTotal vertices: " + updateStatistics.getTotalVertices());
-                System.err.println("\tTotal edges: " + updateStatistics.getTotalEdges());*/
-
-                return ApproximatedPageRank.DeciderResponse.COMPUTE_APPROXIMATE;
-
-            });
+            approximatedPageRank.setObserver(new ApproximatePRStatistics("/home/rrosa/Statistics/Cit-HepPh"));
 
             approximatedPageRank.start();
 

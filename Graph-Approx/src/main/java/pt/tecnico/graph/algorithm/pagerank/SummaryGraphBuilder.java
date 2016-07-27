@@ -20,7 +20,7 @@ import org.apache.flink.util.Collector;
 /**
  * Created by Renato on 05/07/2016.
  */
-public class RepresentativeGraphBuilder<VV, EV> {
+public class SummaryGraphBuilder<VV, EV> {
 
     private static final VertexKeySelector<Long> keySelector = new VertexKeySelector<>(TypeInformation.of(Long.class));
     private static final TypeInformation<Edge<Long, Double>> edgeTypeInfo = TypeInformation.of(new TypeHint<Edge<Long, Double>>() {
@@ -30,7 +30,7 @@ public class RepresentativeGraphBuilder<VV, EV> {
     private final Graph<Long, VV, EV> originalGraph;
     private final double initialRank;
 
-    public RepresentativeGraphBuilder(Graph<Long, VV, EV> originalGraph, double initialRank) {
+    public SummaryGraphBuilder(Graph<Long, VV, EV> originalGraph, double initialRank) {
         this.originalGraph = originalGraph;
         this.initialRank = initialRank;
     }

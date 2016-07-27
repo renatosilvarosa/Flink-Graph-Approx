@@ -2,7 +2,7 @@ package pt.tecnico.graph.stream;
 
 import org.apache.flink.api.common.functions.JoinFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.api.java.tuple.Tuple3;
+import org.apache.flink.graph.Edge;
 import org.apache.flink.graph.EdgeDirection;
 import org.apache.flink.graph.Graph;
 import org.apache.flink.types.LongValue;
@@ -12,30 +12,32 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public class GraphUpdateTracker<K> implements Serializable {
+public class GraphUpdateTracker<K, VV, EV> implements Serializable {
     private final Set<K> verticesToAdd = new HashSet<>();
     private final Set<K> verticesToRemove = new HashSet<>();
+    private final Set<Edge<K, EV>> edgesToAdd = new HashSet<>();
+    private final Set<Edge<K, EV>> edgesToRemove = new HashSet<>();
+
     private Map<K, UpdateInfo> infoMap = new HashMap<>();
-    private long edgeAdditions;
-    private long edgeRemovals;
+
     private long currentNumberOfVertices;
     private long currentNumberOfEdges;
 
-    public GraphUpdateTracker(Graph<K, ?, ?> initialGraph) {
+    public GraphUpdateTracker(Graph<K, VV, EV> initialGraph) {
         try {
-            List<Tuple3<K, Long, Long>> degrees = initialGraph.inDegrees()
+            List<Tuple2<K, UpdateInfo>> degrees = initialGraph.inDegrees()
                     .join(initialGraph.outDegrees())
                     .where(0).equalTo(0)
-                    .with(new JoinFunction<Tuple2<K, LongValue>, Tuple2<K, LongValue>, Tuple3<K, Long, Long>>() {
+                    .with(new JoinFunction<Tuple2<K, LongValue>, Tuple2<K, LongValue>, Tuple2<K, UpdateInfo>>() {
                         @Override
-                        public Tuple3<K, Long, Long> join(Tuple2<K, LongValue> inDeg, Tuple2<K, LongValue> outDeg) throws Exception {
-                            return Tuple3.of(inDeg.f0, inDeg.f1.getValue(), outDeg.f1.getValue());
+                        public Tuple2<K, UpdateInfo> join(Tuple2<K, LongValue> inDeg, Tuple2<K, LongValue> outDeg) throws Exception {
+                            return Tuple2.of(inDeg.f0, new UpdateInfo(inDeg.f1.getValue(), outDeg.f1.getValue()));
                         }
                     }).withForwardedFieldsFirst("f0")
                     .collect();
 
             infoMap = degrees.stream()
-                    .collect(Collectors.toMap(t -> t.f0, t -> new UpdateInfo(t.f1, t.f2)));
+                    .collect(Collectors.toMap(t -> t.f0, t -> t.f1));
             currentNumberOfVertices = initialGraph.numberOfVertices();
             currentNumberOfEdges = initialGraph.numberOfEdges();
         } catch (Exception e) {
@@ -43,19 +45,20 @@ public class GraphUpdateTracker<K> implements Serializable {
         }
     }
 
-    public GraphUpdateStatistics getUpdateStatistics() {
-        return new GraphUpdateStatistics(
-                verticesToAdd.size(), verticesToRemove.size(), edgeAdditions, edgeRemovals,
-                numberOfUpdatedVertices(), getCurrentNumberOfVertices(), getCurrentNumberOfEdges()
-        );
+    public Collection<K> getVerticesToAdd() {
+        return Collections.unmodifiableCollection(verticesToAdd);
     }
 
-    public Set<K> getVerticesToAdd() {
-        return new HashSet<>(verticesToAdd);
+    public Collection<K> getVerticesToRemove() {
+        return Collections.unmodifiableCollection(verticesToRemove);
     }
 
-    public Set<K> getVerticesToRemove() {
-        return new HashSet<>(verticesToRemove);
+    public Collection<Edge<K, EV>> getEdgesToAdd() {
+        return Collections.unmodifiableCollection(edgesToAdd);
+    }
+
+    public Collection<Edge<K, EV>> getEdgesToRemove() {
+        return Collections.unmodifiableCollection(edgesToRemove);
     }
 
     public long getCurrentNumberOfVertices() {
@@ -63,50 +66,51 @@ public class GraphUpdateTracker<K> implements Serializable {
     }
 
     public long getCurrentNumberOfEdges() {
-        return currentNumberOfEdges + edgeAdditions - edgeRemovals;
+        return currentNumberOfEdges + edgesToAdd.size() - edgesToRemove.size();
     }
 
-    public void addEdge(K source, K target) {
-        UpdateInfo info = infoMap.computeIfAbsent(source, k -> {
-            verticesToAdd.add(source);
-            verticesToRemove.remove(source);
+    public void addEdge(Edge<K, EV> edge) {
+        edgesToAdd.add(edge);
+        edgesToRemove.remove(edge);
+        UpdateInfo info = infoMap.computeIfAbsent(edge.getSource(), k -> {
+            verticesToAdd.add(edge.getSource());
+            verticesToRemove.remove(edge.getSource());
             return new UpdateInfo(0, 0);
         });
         info.nUpdates++;
         info.currOutDegree++;
 
-        info = infoMap.computeIfAbsent(source, k -> {
-            verticesToAdd.add(target);
-            verticesToRemove.remove(target);
+        info = infoMap.computeIfAbsent(edge.getSource(), k -> {
+            verticesToAdd.add(edge.getTarget());
+            verticesToRemove.remove(edge.getTarget());
             return new UpdateInfo(0, 0);
         });
         info.nUpdates++;
         info.currInDegree++;
-        edgeAdditions++;
     }
 
-    public void removeEdge(K source, K target) {
-        if (infoMap.containsKey(source)) {
-            UpdateInfo info = infoMap.get(source);
+    public void removeEdge(Edge<K, EV> edge) {
+        edgesToRemove.add(edge);
+        edgesToAdd.remove(edge);
+        if (infoMap.containsKey(edge.getSource())) {
+            UpdateInfo info = infoMap.get(edge.getSource());
             info.nUpdates++;
             info.currOutDegree--;
             if (info.currInDegree == 0 && info.currOutDegree == 0) {
-                verticesToRemove.add(source);
-                verticesToAdd.remove(source);
+                verticesToRemove.add(edge.getSource());
+                verticesToAdd.remove(edge.getSource());
             }
         }
 
-        if (infoMap.containsKey(target)) {
-            UpdateInfo info = infoMap.get(target);
+        if (infoMap.containsKey(edge.getTarget())) {
+            UpdateInfo info = infoMap.get(edge.getTarget());
             info.nUpdates++;
             info.currInDegree--;
             if (info.currInDegree == 0 && info.currOutDegree == 0) {
-                verticesToRemove.add(target);
-                verticesToAdd.remove(target);
+                verticesToRemove.add(edge.getTarget());
+                verticesToAdd.remove(edge.getTarget());
             }
         }
-
-        edgeRemovals++;
     }
 
     public Set<K> updatedAboveThresholdVertexIds(double threshold, EdgeDirection direction) {
@@ -178,6 +182,13 @@ public class GraphUpdateTracker<K> implements Serializable {
 
         set1.addAll(set2);
         return set1;
+    }
+
+    public void resetUpdates() {
+        verticesToAdd.clear();
+        verticesToRemove.clear();
+        edgesToAdd.clear();
+        edgesToRemove.clear();
     }
 
     public void reset(Collection<K> ids) throws Exception {
