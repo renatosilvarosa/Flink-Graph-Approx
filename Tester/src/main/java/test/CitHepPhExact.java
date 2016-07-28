@@ -45,7 +45,7 @@ public class CitHepPhExact {
             approximatedPageRank.setOutputFormat(outputFormat);
 
             String dir = localDir + "/Statistics/CitHepPh";
-            approximatedPageRank.setObserver(new ExactPRStatistics(dir, args[6]));
+            approximatedPageRank.setObserver(new ExactPRStatistics(dir, args[4]));
 
             approximatedPageRank.start();
 
