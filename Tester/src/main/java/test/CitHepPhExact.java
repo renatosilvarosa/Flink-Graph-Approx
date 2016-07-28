@@ -11,14 +11,12 @@ import pt.tecnico.graph.stream.SocketStreamProvider;
 /**
  * Created by Renato on 09/04/2016.
  */
-public class CitHepPh {
+public class CitHepPhExact {
     public static void main(String[] args) {
         String localDir = args[0];
         String remoteDir = args[1];
         int iterations = Integer.parseInt(args[2]);
-        double threshold = Double.parseDouble(args[3]);
-        int neighborhoodSize = Integer.parseInt(args[4]);
-        int outputSize = Integer.parseInt(args[5]);
+        int outputSize = Integer.parseInt(args[3]);
 
         ExecutionEnvironment env = ExecutionEnvironment.createRemoteEnvironment("146.193.41.145", 6123,
                 "flink-graph-approx-0.1.jar", "flink-graph-algorithms-0.1.jar"
@@ -35,13 +33,11 @@ public class CitHepPh {
             ApproximatedPageRankConfig config = new ApproximatedPageRankConfig()
                     .setBeta(0.85)
                     .setIterations(iterations)
-                    .setUpdatedRatioThreshold(threshold)
-                    .setNeighborhoodSize(neighborhoodSize)
                     .setOutputSize(outputSize);
 
-            String outputDir = String.format("%s/Results/CitHepPh-%02.2f-%02d", remoteDir, threshold, neighborhoodSize);
+            String outputDir = String.format("%s/Results/CitHepPh-exact", remoteDir);
             PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat(outputDir, System.lineSeparator(), ";", false, true);
-            outputFormat.setName("approx_pageRank");
+            outputFormat.setName("exact_pageRank");
 
             ApproximatedPageRank approximatedPageRank = new ApproximatedPageRank(new SocketStreamProvider("localhost", 1234),
                     graph);
@@ -49,7 +45,7 @@ public class CitHepPh {
             approximatedPageRank.setOutputFormat(outputFormat);
 
             String dir = localDir + "/Statistics/CitHepPh";
-            approximatedPageRank.setObserver(new ApproximatedPRStatistics(dir, args[6]));
+            approximatedPageRank.setObserver(new ExactPRStatistics(dir, args[6]));
 
             approximatedPageRank.start();
 
