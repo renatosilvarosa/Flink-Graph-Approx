@@ -1,4 +1,4 @@
-package test;
+package test.pagerank;
 
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.java.DataSet;
@@ -11,9 +11,9 @@ import pt.tecnico.graph.stream.GraphUpdateTracker;
 /**
  * Created by Renato on 26/07/2016.
  */
-class ExactPRStatistics extends PRStatistics {
+public class ExactPRStatistics extends PRStatistics {
 
-    ExactPRStatistics(String dir, String fileName) {
+    public ExactPRStatistics(String dir, String fileName) {
         super(fileName, dir);
     }
 

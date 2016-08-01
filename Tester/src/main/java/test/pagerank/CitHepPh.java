@@ -1,4 +1,4 @@
-package test;
+package test.pagerank;
 
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.graph.Graph;

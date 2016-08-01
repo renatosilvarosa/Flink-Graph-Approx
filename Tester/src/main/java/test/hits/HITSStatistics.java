@@ -1,6 +1,6 @@
-package test;
+package test.hits;
 
-import pt.tecnico.graph.algorithm.pagerank.PageRankQueryObserver;
+import pt.tecnico.graph.algorithm.hits.HITSQueryObserver;
 
 import java.io.PrintStream;
 import java.nio.file.Files;
@@ -10,12 +10,12 @@ import java.nio.file.Paths;
 /**
  * Created by Renato on 27/07/2016.
  */
-public abstract class PRStatistics implements PageRankQueryObserver {
-    private final String dir;
-    private final String fileName;
+public abstract class HITSStatistics implements HITSQueryObserver {
+    protected final String dir;
+    protected final String fileName;
     protected PrintStream printStream;
 
-    public PRStatistics(String fileName, String dir) {
+    public HITSStatistics(String fileName, String dir) {
         this.fileName = fileName;
         this.dir = dir;
     }

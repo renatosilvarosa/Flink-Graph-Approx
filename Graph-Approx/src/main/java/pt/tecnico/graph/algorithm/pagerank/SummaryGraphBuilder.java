@@ -20,7 +20,7 @@ import org.apache.flink.util.Collector;
 /**
  * Created by Renato on 05/07/2016.
  */
-public class SummaryGraphBuilder<VV, EV> {
+public class SummaryGraphBuilder<K, VV, EV> {
 
     private static final VertexKeySelector<Long> keySelector = new VertexKeySelector<>(TypeInformation.of(Long.class));
     private static final TypeInformation<Edge<Long, Double>> edgeTypeInfo = TypeInformation.of(new TypeHint<Edge<Long, Double>>() {
