@@ -40,10 +40,10 @@ public class ExactHITSStatistics extends HITSStatistics {
             printStream.format("%d;%d;%d;%d%n", id, nVertices, nEdges, jobExecutionResult.getNetRuntime());
             printStream.flush();
 
-            result.project(1).project(0).sortPartition(0, Order.DESCENDING).writeAsCsv(String.format("%s/result-hub-%02d.csv", dir, id),
+            result.sortPartition("f1.f0", Order.DESCENDING).project(1).project(0).writeAsCsv(String.format("%s/result-hub-%02d.csv", dir, id),
                     System.lineSeparator(), ";", FileSystem.WriteMode.OVERWRITE);
 
-            result.project(1).project(1).sortPartition(0, Order.DESCENDING).writeAsCsv(String.format("%s/result-auth-%02d.csv", dir, id),
+            result.sortPartition("f1.f1", Order.DESCENDING).project(1).project(0).writeAsCsv(String.format("%s/result-auth-%02d.csv", dir, id),
                     System.lineSeparator(), ";", FileSystem.WriteMode.OVERWRITE);
 
         } catch (Exception e) {

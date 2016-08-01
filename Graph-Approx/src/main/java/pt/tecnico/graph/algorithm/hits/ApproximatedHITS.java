@@ -132,7 +132,7 @@ public class ApproximatedHITS extends GraphStreamHandler<HITS.Result<Long>> {
                         outputResult(tag, newResult);
                         newResult.output(resultOutputFormat);
 
-                        env.execute("Approx PageRank it. " + iteration);
+                        env.execute("Approx HITS it. " + iteration);
                         observer.onQueryResult(iteration, update, response, graph, computedVertices, newResult, env.getLastJobExecutionResult());
 
                         break;
