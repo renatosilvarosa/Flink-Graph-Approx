@@ -16,16 +16,14 @@ public class CitHepPhApprox {
         int iterations = Integer.parseInt(args[1]);
         int outputSize = Integer.parseInt(args[2]);
 
-        ExecutionEnvironment env = /*ExecutionEnvironment.createRemoteEnvironment("146.193.41.145", 6123,
+        ExecutionEnvironment env = ExecutionEnvironment.createRemoteEnvironment("146.193.41.145", 6123,
                 "flink-graph-approx-0.1.jar", "flink-graph-algorithms-0.1.jar"
-        );*/
-                ExecutionEnvironment.createLocalEnvironment();
+        );
 
         env.getConfig().disableSysoutLogging().setParallelism(1);
 
         try {
-            String edgesPath = "D:/Documents/Dissertação/Datasets/Cit-HepPh/Cit-HepPh-init.txt";
-            //String edgesPath = "/home/rrosa/Datasets/Cit-HepPh/Cit-HepPh-init.txt";
+            String edgesPath = "/home/rrosa/Datasets/Cit-HepPh/Cit-HepPh-init.txt";
             Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader(edgesPath, env)
                     .ignoreCommentsEdges("#")
                     .fieldDelimiterEdges("\t")
