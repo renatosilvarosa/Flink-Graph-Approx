@@ -14,15 +14,14 @@ import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.graph.Edge;
 import org.apache.flink.graph.Graph;
-import org.apache.flink.graph.Vertex;
-import org.apache.flink.graph.library.link_analysis.HITS;
-import org.apache.flink.graph.utils.Murmur3_32;
+import org.apache.flink.graph.library.link_analysis.HITS.Result;
 import org.apache.flink.graph.utils.proxy.GraphAlgorithmDelegatingDataSet;
 import org.apache.flink.types.DoubleValue;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.Preconditions;
 
 import java.util.Collection;
+import java.util.Iterator;
 
 import static org.apache.flink.api.common.ExecutionConfig.PARALLELISM_DEFAULT;
 
@@ -30,29 +29,29 @@ import static org.apache.flink.api.common.ExecutionConfig.PARALLELISM_DEFAULT;
  * Created by Renato on 29/07/2016.
  */
 public class SummarizedHITS<K, VV, EV>
-        extends GraphAlgorithmDelegatingDataSet<K, VV, EV, HITS.Result<K>> {
+        extends GraphAlgorithmDelegatingDataSet<K, VV, EV, Result<K>> {
 
     private static final String CHANGE_IN_SCORES = "change in scores";
 
     private static final String HUBBINESS_SUM_SQUARED = "hubbiness sum squared";
 
     private static final String AUTHORITY_SUM_SQUARED = "authority sum squared";
-    private final DataSet<Tuple1<K>> verticesToCompute;
     // Required configuration
     private int maxIterations;
     private double convergenceThreshold;
     // Optional configuration
     private int parallelism = PARALLELISM_DEFAULT;
+
+    private DataSet<K> verticesToCompute;
     private DataSet<Result<K>> previousResults;
 
     /**
      * Hyperlink-Induced Topic Search with a fixed number of iterations.
      *
-     * @param verticesToCompute
-     * @param iterations        fixed number of iterations
+     * @param iterations fixed number of iterations
      */
-    public SummarizedHITS(DataSet<K> verticesToCompute, int iterations) {
-        this(verticesToCompute, iterations, Double.MAX_VALUE);
+    public SummarizedHITS(int iterations) {
+        this(iterations, Double.MAX_VALUE);
     }
 
     /**
@@ -60,11 +59,10 @@ public class SummarizedHITS<K, VV, EV>
      * terminates When the total change in hub and authority scores over all
      * vertices falls to or below the given threshold value.
      *
-     * @param verticesToCompute
      * @param convergenceThreshold convergence threshold for sum of scores
      */
-    public SummarizedHITS(DataSet<K> verticesToCompute, double convergenceThreshold) {
-        this(verticesToCompute, Integer.MAX_VALUE, convergenceThreshold);
+    public SummarizedHITS(double convergenceThreshold) {
+        this(Integer.MAX_VALUE, convergenceThreshold);
     }
 
     /**
@@ -73,12 +71,10 @@ public class SummarizedHITS<K, VV, EV>
      * of iterations or when the total change in hub and authority scores over all
      * vertices falls to or below the given threshold value.
      *
-     * @param verticesToCompute
      * @param maxIterations        maximum number of iterations
      * @param convergenceThreshold convergence threshold for sum of scores
      */
-    public SummarizedHITS(DataSet<K> verticesToCompute, int maxIterations, double convergenceThreshold) {
-        this.verticesToCompute = verticesToCompute.map(Tuple1::of);
+    public SummarizedHITS(int maxIterations, double convergenceThreshold) {
         Preconditions.checkArgument(maxIterations > 0, "Number of iterations must be greater than zero");
         Preconditions.checkArgument(convergenceThreshold > 0.0, "Convergence threshold must be greater than zero");
 
@@ -98,9 +94,19 @@ public class SummarizedHITS<K, VV, EV>
         return this;
     }
 
+    public SummarizedHITS<K, VV, EV> setVerticesToCompute(DataSet<K> verticesToCompute) {
+        this.verticesToCompute = verticesToCompute;
+        return this;
+    }
+
+    public SummarizedHITS<K, VV, EV> setPreviousResults(DataSet<Result<K>> previousResults) {
+        this.previousResults = previousResults;
+        return this;
+    }
+
     @Override
     protected String getAlgorithmName() {
-        return HITS.class.getName();
+        return this.getClass().getName();
     }
 
     @Override
@@ -124,11 +130,18 @@ public class SummarizedHITS<K, VV, EV>
 
 
     @Override
-    public DataSet<HITS.Result<K>> runInternal(Graph<K, VV, EV> input)
+    public DataSet<Result<K>> runInternal(Graph<K, VV, EV> input)
             throws Exception {
 
+        DataSet<Tuple1<K>> verticesTuples = verticesToCompute.map(new MapFunction<K, Tuple1<K>>() {
+            @Override
+            public Tuple1<K> map(K value) throws Exception {
+                return Tuple1.of(value);
+            }
+        });
+
         DataSet<Tuple2<K, K>> edges = input.getEdgeIds()
-                .join(verticesToCompute)
+                .join(verticesTuples)
                 .where(0).equalTo(0)
                 .with(new JoinFunction<Tuple2<K, K>, Tuple1<K>, Tuple2<K, K>>() {
                     @Override
@@ -137,7 +150,7 @@ public class SummarizedHITS<K, VV, EV>
                     }
                 }).returns(input.getEdgeIds().getType())
                 .withForwardedFieldsFirst("*->*")
-                .join(verticesToCompute)
+                .join(verticesTuples)
                 .where(1).equalTo(0)
                 .with(new JoinFunction<Tuple2<K, K>, Tuple1<K>, Tuple2<K, K>>() {
                     @Override
@@ -160,7 +173,7 @@ public class SummarizedHITS<K, VV, EV>
                     }
                 });
 
-        DataSet<Result<K>> sumToOutside = verticesToCompute.join(outside)
+        DataSet<Result<K>> sumToOutside = verticesTuples.join(outside)
                 .where(0).equalTo(0)
                 .with(new JoinFunction<Tuple1<K>, Tuple2<K, K>, Tuple2<K, K>>() {
                     @Override
@@ -178,13 +191,13 @@ public class SummarizedHITS<K, VV, EV>
                 .reduce(new ReduceFunction<Result<K>>() {
                     @Override
                     public Result<K> reduce(Result<K> value1, Result<K> value2) throws Exception {
-                        value1.f1.f0.setValue(value1.f1.f0.getValue() + value2.f1.f0.getValue());
-                        value1.f1.f1.setValue(value1.f1.f1.getValue() + value2.f1.f1.getValue());
+                        value1.f1.f0.setValue(value1.getHubScore().getValue() + value2.getHubScore().getValue());
+                        value1.f1.f1.setValue(value1.getAuthorityScore().getValue() + value2.getAuthorityScore().getValue());
                         return value1;
                     }
                 });
 
-        DataSet<Result<K>> sumToInside = verticesToCompute.join(outside)
+        DataSet<Result<K>> sumToInside = verticesTuples.join(outside)
                 .where(0).equalTo(1)
                 .with(new JoinFunction<Tuple1<K>, Tuple2<K, K>, Tuple2<K, K>>() {
                     @Override
@@ -202,8 +215,8 @@ public class SummarizedHITS<K, VV, EV>
                 .reduce(new ReduceFunction<Result<K>>() {
                     @Override
                     public Result<K> reduce(Result<K> value1, Result<K> value2) throws Exception {
-                        value1.f1.f0.setValue(value1.f1.f0.getValue() + value2.f1.f0.getValue());
-                        value1.f1.f1.setValue(value1.f1.f1.getValue() + value2.f1.f1.getValue());
+                        value1.f1.f0.setValue(value1.getHubScore().getValue() + value2.getHubScore().getValue());
+                        value1.f1.f1.setValue(value1.getAuthorityScore().getValue() + value2.getAuthorityScore().getValue());
                         return value1;
                     }
                 });
@@ -211,7 +224,7 @@ public class SummarizedHITS<K, VV, EV>
         // ID, hub, authority
         DataSet<Tuple3<K, DoubleValue, DoubleValue>> initialScores =
                 previousResults
-                        .join(verticesToCompute)
+                        .join(verticesTuples)
                         .where(0).equalTo(0)
                         .with(new JoinFunction<Result<K>, Tuple1<K>, Tuple3<K, DoubleValue, DoubleValue>>() {
                             @Override
@@ -228,11 +241,11 @@ public class SummarizedHITS<K, VV, EV>
                 .coGroup(edges)
                 .where(0)
                 .equalTo(1)
-                .with(new Hubbiness<K>())
+                .with(new Hubbiness<>())
                 .setParallelism(parallelism)
                 .name("Hub")
                 .groupBy(0)
-                .reduce(new SumScore<K>())
+                .reduce(new SumScore<>())
                 .setCombineHint(ReduceOperatorBase.CombineHint.HASH)
                 .setParallelism(parallelism)
                 .name("Sum")
@@ -248,7 +261,7 @@ public class SummarizedHITS<K, VV, EV>
 
         // sum-of-hubbiness-squared
         DataSet<DoubleValue> hubbinessSumSquared = hubbiness
-                .map(new Square<K>())
+                .map(new Square<>())
                 .setParallelism(parallelism)
                 .name("Square")
                 .reduce(new Sum())
@@ -281,7 +294,7 @@ public class SummarizedHITS<K, VV, EV>
 
         // sum-of-authority-squared
         DataSet<DoubleValue> authoritySumSquared = authority
-                .map(new Square<K>())
+                .map(new Square<>())
                 .setParallelism(parallelism)
                 .name("Square")
                 .reduce(new Sum())
@@ -294,7 +307,7 @@ public class SummarizedHITS<K, VV, EV>
                 .fullOuterJoin(authority, JoinOperatorBase.JoinHint.REPARTITION_SORT_MERGE)
                 .where(0)
                 .equalTo(0)
-                .with(new JoinAndNormalizeHubAndAuthority<K>())
+                .with(new JoinAndNormalizeHubAndAuthority<>())
                 .withBroadcastSet(hubbinessSumSquared, HUBBINESS_SUM_SQUARED)
                 .withBroadcastSet(authoritySumSquared, AUTHORITY_SUM_SQUARED)
                 .setParallelism(parallelism)
@@ -397,11 +410,14 @@ public class SummarizedHITS<K, VV, EV>
         @Override
         public void coGroup(Iterable<Tuple3<T, DoubleValue, DoubleValue>> vertex, Iterable<Tuple2<T, T>> edges, Collector<Tuple2<T, DoubleValue>> out)
                 throws Exception {
-            output.f1 = vertex.iterator().next().f2;
+            Iterator<Tuple3<T, DoubleValue, DoubleValue>> iterator = vertex.iterator();
+            if (iterator.hasNext()) {
+                output.f1 = iterator.next().f2;
 
-            for (Tuple2<T, T> edge : edges) {
-                output.f0 = edge.f0;
-                out.collect(output);
+                for (Tuple2<T, T> edge : edges) {
+                    output.f0 = edge.f0;
+                    out.collect(output);
+                }
             }
         }
     }
@@ -437,11 +453,14 @@ public class SummarizedHITS<K, VV, EV>
         @Override
         public void coGroup(Iterable<Tuple2<T, DoubleValue>> vertex, Iterable<Tuple2<T, T>> edges, Collector<Tuple2<T, DoubleValue>> out)
                 throws Exception {
-            output.f1 = vertex.iterator().next().f1;
+            Iterator<Tuple2<T, DoubleValue>> iterator = vertex.iterator();
+            if (iterator.hasNext()) {
+                output.f1 = iterator.next().f1;
 
-            for (Tuple2<T, T> edge : edges) {
-                output.f0 = edge.f1;
-                out.collect(output);
+                for (Tuple2<T, T> edge : edges) {
+                    output.f0 = edge.f1;
+                    out.collect(output);
+                }
             }
         }
     }
@@ -460,7 +479,7 @@ public class SummarizedHITS<K, VV, EV>
                 throws Exception {
             double val = value.f1.getValue();
             output.setValue(val * val);
-
+            System.err.println(val);
             return output;
         }
     }
@@ -499,10 +518,12 @@ public class SummarizedHITS<K, VV, EV>
 
             Collection<DoubleValue> var;
             var = getRuntimeContext().getBroadcastVariable(HUBBINESS_SUM_SQUARED);
-            hubbinessRootSumSquared = Math.sqrt(var.iterator().next().getValue());
+            Iterator<DoubleValue> iterator = var.iterator();
+            hubbinessRootSumSquared = iterator.hasNext() ? Math.sqrt(iterator.next().getValue()) : 1.0;
 
             var = getRuntimeContext().getBroadcastVariable(AUTHORITY_SUM_SQUARED);
-            authorityRootSumSquared = Math.sqrt(var.iterator().next().getValue());
+            iterator = var.iterator();
+            authorityRootSumSquared = iterator.hasNext() ? Math.sqrt(iterator.next().getValue()) : 1.0;
         }
 
         @Override
@@ -590,64 +611,15 @@ public class SummarizedHITS<K, VV, EV>
      */
     @FunctionAnnotation.ForwardedFields("0")
     private static class TranslateResult<T>
-            implements MapFunction<Tuple3<T, DoubleValue, DoubleValue>, HITS.Result<T>> {
-        private HITS.Result<T> output = new HITS.Result<>();
+            implements MapFunction<Tuple3<T, DoubleValue, DoubleValue>, Result<T>> {
+        private Result<T> output = new Result<>();
 
         @Override
-        public HITS.Result<T> map(Tuple3<T, DoubleValue, DoubleValue> value) throws Exception {
+        public Result<T> map(Tuple3<T, DoubleValue, DoubleValue> value) throws Exception {
             output.f0 = value.f0;
             output.f1.f0 = value.f1;
             output.f1.f1 = value.f2;
             return output;
-        }
-    }
-
-    /**
-     * Wraps the vertex type to encapsulate results from the HITS algorithm.
-     *
-     * @param <T> ID type
-     */
-    public static class Result<T>
-            extends Vertex<T, Tuple2<DoubleValue, DoubleValue>> {
-        public static final int HASH_SEED = 0xc7e39a63;
-
-        private Murmur3_32 hasher = new Murmur3_32(HASH_SEED);
-
-        public Result() {
-            f1 = new Tuple2<>();
-        }
-
-        /**
-         * Get the hub score. Good hubs link to good authorities.
-         *
-         * @return the hub score
-         */
-        public DoubleValue getHubScore() {
-            return f1.f0;
-        }
-
-        /**
-         * Get the authority score. Good authorities link to good hubs.
-         *
-         * @return the authority score
-         */
-        public DoubleValue getAuthorityScore() {
-            return f1.f1;
-        }
-
-        public String toVerboseString() {
-            return "Vertex ID: " + f0
-                    + ", hub score: " + getHubScore()
-                    + ", authority score: " + getAuthorityScore();
-        }
-
-        @Override
-        public int hashCode() {
-            return hasher.reset()
-                    .hash(f0.hashCode())
-                    .hash(f1.f0.getValue())
-                    .hash(f1.f1.getValue())
-                    .hash();
         }
     }
 }

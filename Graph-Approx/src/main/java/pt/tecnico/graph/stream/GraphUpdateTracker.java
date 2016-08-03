@@ -80,7 +80,7 @@ public class GraphUpdateTracker<K, VV, EV> implements Serializable {
         info.nUpdates++;
         info.currOutDegree++;
 
-        info = infoMap.computeIfAbsent(edge.getSource(), k -> {
+        info = infoMap.computeIfAbsent(edge.getTarget(), k -> {
             verticesToAdd.add(edge.getTarget());
             verticesToRemove.remove(edge.getTarget());
             return new UpdateInfo(0, 0);
@@ -173,7 +173,7 @@ public class GraphUpdateTracker<K, VV, EV> implements Serializable {
                     .collect(Collectors.toSet());
         }
 
-        if (direction == EdgeDirection.IN || direction == EdgeDirection.ALL) {
+        if (direction == EdgeDirection.OUT || direction == EdgeDirection.ALL) {
             set2 = infoMap.entrySet().stream()
                     .filter(e -> e.getValue().currOutDegree != e.getValue().prevOutDegree)
                     .map(Map.Entry::getKey)

@@ -154,7 +154,12 @@ public class ApproximatedHITS extends GraphStreamHandler<HITS.Result<Long>> {
         Set<Long> updatedIds = graphUpdateTracker.updatedAboveThresholdVertexIds(config.getUpdatedRatioThreshold(), EdgeDirection.ALL);
 
         computedVertices = env.fromCollection(updatedIds, TypeInformation.of(Long.class));
-        DataSet<HITS.Result<Long>> ranks = graph.run(new SummarizedHITS<>(computedVertices, 30));
+
+        SummarizedHITS<Long, NullValue, NullValue> summarizedHITS = new SummarizedHITS<Long, NullValue, NullValue>(30)
+                .setVerticesToCompute(computedVertices)
+                .setPreviousResults(previousResults);
+
+        DataSet<HITS.Result<Long>> ranks = graph.run(summarizedHITS);
 
         ranks = previousResults.coGroup(ranks)
                 .where(0).equalTo(0)
