@@ -16,11 +16,11 @@ import pt.tecnico.graph.stream.SocketStreamProvider;
 /**
  * Created by Renato on 09/04/2016.
  */
-public class AcmSigmod2016 {
+public class PRAcmSigmod2016 {
     public static void main(String[] args) {
         //ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
         ExecutionEnvironment env = ExecutionEnvironment.createRemoteEnvironment("146.193.41.145", 6123,
-                "flink-graph-approx-0.1.jar", "flink-graph-algorithms-0.1.jar"
+                "flink-graph-approx-0.2.jar", "flink-graph-algorithms-0.2.jar"
         );
         env.getConfig()
                 //.disableSysoutLogging()

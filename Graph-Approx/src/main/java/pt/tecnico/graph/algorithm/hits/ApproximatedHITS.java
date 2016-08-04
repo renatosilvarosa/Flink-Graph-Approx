@@ -182,10 +182,14 @@ public class ApproximatedHITS extends GraphStreamHandler<HITS.Result<Long>> {
         return ranks;
     }
 
-    private void outputResult(String date, DataSet<HITS.Result<Long>> ranks) {
+    private void outputResult(String tag, DataSet<HITS.Result<Long>> ranks) {
         outputFormat.setIteration(iteration);
-        outputFormat.setTags(date);
-        ranks.sortPartition(1, Order.DESCENDING).setParallelism(1).first(config.getOutputSize()).output(outputFormat);
+
+        outputFormat.setTags(tag, "hub");
+        ranks.sortPartition("f1.f0", Order.DESCENDING).first(config.getOutputSize()).output(outputFormat);
+        outputFormat.setTags(tag, "auth");
+        ranks.sortPartition("f1.f1", Order.DESCENDING).first(config.getOutputSize()).output(outputFormat);
+
     }
 
     public ApproximatedHITSConfig getConfig() {

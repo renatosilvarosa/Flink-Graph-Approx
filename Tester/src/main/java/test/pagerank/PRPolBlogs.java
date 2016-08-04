@@ -11,15 +11,17 @@ import pt.tecnico.graph.stream.FileStreamProvider;
 /**
  * Created by Renato on 09/04/2016.
  */
-public class PolBlogsExact {
+public class PRPolBlogs {
     public static void main(String[] args) {
         String localDir = args[0];
         String remoteDir = args[1];
         int iterations = Integer.parseInt(args[2]);
-        int outputSize = Integer.parseInt(args[3]);
+        double threshold = Double.parseDouble(args[3]);
+        int neighborhoodSize = Integer.parseInt(args[4]);
+        int outputSize = Integer.parseInt(args[5]);
 
         ExecutionEnvironment env = ExecutionEnvironment.createRemoteEnvironment("146.193.41.145", 6123,
-                "flink-graph-approx-0.1.jar", "flink-graph-algorithms-0.1.jar"
+                "flink-graph-approx-0.2.jar", "flink-graph-algorithms-0.2.jar"
         );
 
         env.getConfig()
@@ -34,11 +36,13 @@ public class PolBlogsExact {
             ApproximatedPageRankConfig config = new ApproximatedPageRankConfig()
                     .setBeta(0.85)
                     .setIterations(iterations)
+                    .setUpdatedRatioThreshold(threshold)
+                    .setNeighborhoodSize(neighborhoodSize)
                     .setOutputSize(outputSize);
 
-            String outputDir = String.format("%s/Results/PolBlogs-exact", remoteDir);
+            String outputDir = String.format("%s/Results/PolBlogs-%02.2f-%02d", remoteDir, threshold, neighborhoodSize);
             PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat(outputDir, System.lineSeparator(), ";", false, true);
-            outputFormat.setName("exact_pageRank");
+            outputFormat.setName("approx_pageRank");
 
             FileStreamProvider<String> streamProvider = new FileStreamProvider<>(localDir + "/Datasets/polblogs/polblogs_cont.csv", s -> {
                 Thread.sleep(10);
@@ -49,7 +53,7 @@ public class PolBlogsExact {
             approximatedPageRank.setOutputFormat(outputFormat);
 
             String dir = localDir + "/Statistics/polblogs";
-            approximatedPageRank.setObserver(new ExactPRStatistics(dir, args[4]));
+            approximatedPageRank.setObserver(new ApproximatedPRStatistics(dir, args[6]));
 
             approximatedPageRank.start();
 

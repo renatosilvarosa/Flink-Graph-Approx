@@ -6,12 +6,12 @@ import org.apache.flink.types.NullValue;
 import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRank;
 import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRankConfig;
 import pt.tecnico.graph.algorithm.pagerank.PageRankCsvOutputFormat;
-import pt.tecnico.graph.stream.SocketStreamProvider;
+import pt.tecnico.graph.stream.FileStreamProvider;
 
 /**
  * Created by Renato on 09/04/2016.
  */
-public class CitHepPhExact {
+public class PRPolBlogsExact {
     public static void main(String[] args) {
         String localDir = args[0];
         String remoteDir = args[1];
@@ -19,15 +19,16 @@ public class CitHepPhExact {
         int outputSize = Integer.parseInt(args[3]);
 
         ExecutionEnvironment env = ExecutionEnvironment.createRemoteEnvironment("146.193.41.145", 6123,
-                "flink-graph-approx-0.1.jar", "flink-graph-algorithms-0.1.jar"
+                "flink-graph-approx-0.2.jar", "flink-graph-algorithms-0.2.jar"
         );
 
-        env.getConfig().disableSysoutLogging().setParallelism(1);
-
+        env.getConfig()
+                .disableSysoutLogging()
+                .setParallelism(1);
         try {
-            Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader("/home/rrosa/Datasets/Cit-HepPh/Cit-HepPh-init.txt", env)
+            Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader(remoteDir + "/Datasets/polblogs/polblogs_init.csv", env)
                     .ignoreCommentsEdges("#")
-                    .fieldDelimiterEdges("\t")
+                    .fieldDelimiterEdges(";")
                     .keyType(Long.class);
 
             ApproximatedPageRankConfig config = new ApproximatedPageRankConfig()
@@ -35,16 +36,19 @@ public class CitHepPhExact {
                     .setIterations(iterations)
                     .setOutputSize(outputSize);
 
-            String outputDir = String.format("%s/Results/CitHepPh-exact", remoteDir);
+            String outputDir = String.format("%s/Results/PolBlogs-exact", remoteDir);
             PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat(outputDir, System.lineSeparator(), ";", false, true);
             outputFormat.setName("exact_pageRank");
 
-            ApproximatedPageRank approximatedPageRank = new ApproximatedPageRank(new SocketStreamProvider("localhost", 1234),
-                    graph);
+            FileStreamProvider<String> streamProvider = new FileStreamProvider<>(localDir + "/Datasets/polblogs/polblogs_cont.csv", s -> {
+                Thread.sleep(10);
+                return s;
+            });
+            ApproximatedPageRank approximatedPageRank = new ApproximatedPageRank(streamProvider, graph);
             approximatedPageRank.setConfig(config);
             approximatedPageRank.setOutputFormat(outputFormat);
 
-            String dir = localDir + "/Statistics/CitHepPh";
+            String dir = localDir + "/Statistics/polblogs";
             approximatedPageRank.setObserver(new ExactPRStatistics(dir, args[4]));
 
             approximatedPageRank.start();
@@ -53,4 +57,5 @@ public class CitHepPhExact {
             e.printStackTrace();
         }
     }
+
 }

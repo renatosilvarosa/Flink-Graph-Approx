@@ -11,7 +11,7 @@ import pt.tecnico.graph.stream.SocketStreamProvider;
 /**
  * Created by Renato on 09/04/2016.
  */
-public class CitHepPh {
+public class PRCitHepPhApprox {
     public static void main(String[] args) {
         String localDir = args[0];
         String remoteDir = args[1];
@@ -21,7 +21,7 @@ public class CitHepPh {
         int outputSize = Integer.parseInt(args[5]);
 
         ExecutionEnvironment env = ExecutionEnvironment.createRemoteEnvironment("146.193.41.145", 6123,
-                "flink-graph-approx-0.1.jar", "flink-graph-algorithms-0.1.jar"
+                "flink-graph-approx-0.2.jar", "flink-graph-algorithms-0.2.jar"
         );
 
         env.getConfig().disableSysoutLogging().setParallelism(1);
@@ -41,14 +41,14 @@ public class CitHepPh {
 
             String outputDir = String.format("%s/Results/CitHepPh-%02.2f-%02d", remoteDir, threshold, neighborhoodSize);
             PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat(outputDir, System.lineSeparator(), ";", false, true);
-            outputFormat.setName("approx_pageRank");
+            outputFormat.setName("approx_PR");
 
             ApproximatedPageRank approximatedPageRank = new ApproximatedPageRank(new SocketStreamProvider("localhost", 1234),
                     graph);
             approximatedPageRank.setConfig(config);
             approximatedPageRank.setOutputFormat(outputFormat);
 
-            String dir = localDir + "/Statistics/CitHepPh";
+            String dir = localDir + "/Statistics/CitHepPh/PR";
             approximatedPageRank.setObserver(new ApproximatedPRStatistics(dir, args[6]));
 
             approximatedPageRank.start();
