@@ -19,11 +19,10 @@ public class HITSCitHepPhApprox {
         int outputSize = Integer.parseInt(args[3]);
 
         ExecutionEnvironment env =
-/*                ExecutionEnvironment.createRemoteEnvironment("146.193.41.145", 6123,
+                ExecutionEnvironment.createRemoteEnvironment("146.193.41.145", 6123,
                 "flink-graph-approx-0.2.jar", "flink-graph-algorithms-0.2.jar"
         );
-        */
-                ExecutionEnvironment.createLocalEnvironment();
+        //ExecutionEnvironment.createLocalEnvironment();
 
         env.getConfig()
                 //.disableSysoutLogging()
@@ -50,7 +49,7 @@ public class HITSCitHepPhApprox {
 
             HITSCsvOutputFormat authOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/CitHepPh/HITS/", System.lineSeparator(), ";", false, true);
             authOutputFormat.setName("approx_hits");
-            approximatedHITS.setAuthorityOutputFormat(hubOutputFormat);
+            approximatedHITS.setAuthorityOutputFormat(authOutputFormat);
 
             String dir = localDir + "/Statistics/CitHepPh/HITS";
             approximatedHITS.setObserver(new ApproximatedHITSStatistics(dir, args[4]));

@@ -8,6 +8,7 @@ import org.apache.flink.api.common.operators.base.ReduceOperatorBase;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.functions.FunctionAnnotation;
 import org.apache.flink.api.java.operators.IterativeDataSet;
+import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
@@ -132,19 +133,51 @@ public class SummarizedHITS<K, VV, EV>
     public DataSet<Result<K>> runInternal(Graph<K, VV, EV> input)
             throws Exception {
 
-        GraphUtils.EdgeToTuple2<K, EV> mapper = new GraphUtils.EdgeToTuple2<>();
-        GraphUtils.VertexKeySelector<K> keySelector = new GraphUtils.VertexKeySelector<>(input.getVertexIds().getType());
+        DataSet<Tuple1<K>> verticesTuples = verticesToCompute.map(new MapFunction<K, Tuple1<K>>() {
+            @Override
+            public Tuple1<K> map(K value) throws Exception {
+                return Tuple1.of(value);
+            }
+        });
 
-        DataSet<Edge<K, EV>> edgeDataSet = GraphUtils.selectEdgesWithIds(input, verticesToCompute);
-        DataSet<Tuple2<K, K>> edges = edgeDataSet.map(mapper);
-
-        DataSet<Tuple2<K, K>> outside = GraphUtils.externalEdges(input, edgeDataSet).map(mapper);
-
-        DataSet<Result<K>> sumToOutside = input.getVertexIds().join(outside)
-                .where(keySelector).equalTo(0)
-                .with(new JoinFunction<K, Tuple2<K, K>, Tuple2<K, K>>() {
+        DataSet<Tuple2<K, K>> edges = input.getEdgeIds()
+                .join(verticesTuples)
+                .where(0).equalTo(0)
+                .with(new JoinFunction<Tuple2<K, K>, Tuple1<K>, Tuple2<K, K>>() {
                     @Override
-                    public Tuple2<K, K> join(K first, Tuple2<K, K> second) throws Exception {
+                    public Tuple2<K, K> join(Tuple2<K, K> first, Tuple1<K> second) throws Exception {
+                        return first;
+                    }
+                }).returns(input.getEdgeIds().getType())
+                .withForwardedFieldsFirst("*->*")
+                .join(verticesTuples)
+                .where(1).equalTo(0)
+                .with(new JoinFunction<Tuple2<K, K>, Tuple1<K>, Tuple2<K, K>>() {
+                    @Override
+                    public Tuple2<K, K> join(Tuple2<K, K> first, Tuple1<K> second) throws Exception {
+                        return first;
+                    }
+                }).returns(input.getEdgeIds().getType())
+                .withForwardedFieldsFirst("*->*");
+
+        DataSet<Tuple2<K, K>> outside = input.getEdgeIds().coGroup(edges)
+                .where(0, 1).equalTo(0, 1)
+                .with(new CoGroupFunction<Tuple2<K, K>, Tuple2<K, K>, Tuple2<K, K>>() {
+                    @Override
+                    public void coGroup(Iterable<Tuple2<K, K>> first, Iterable<Tuple2<K, K>> second, Collector<Tuple2<K, K>> out) throws Exception {
+                        if (!second.iterator().hasNext()) {
+                            for (Tuple2<K, K> next : first) {
+                                out.collect(next);
+                            }
+                        }
+                    }
+                });
+
+        DataSet<Result<K>> sumToOutside = verticesTuples.join(outside)
+                .where(0).equalTo(0)
+                .with(new JoinFunction<Tuple1<K>, Tuple2<K, K>, Tuple2<K, K>>() {
+                    @Override
+                    public Tuple2<K, K> join(Tuple1<K> first, Tuple2<K, K> second) throws Exception {
                         return second;
                     }
                 }).join(previousResults)
@@ -164,11 +197,11 @@ public class SummarizedHITS<K, VV, EV>
                     }
                 });
 
-        DataSet<Result<K>> sumToInside = input.getVertexIds().join(outside)
-                .where(keySelector).equalTo(1)
-                .with(new JoinFunction<K, Tuple2<K, K>, Tuple2<K, K>>() {
+        DataSet<Result<K>> sumToInside = verticesTuples.join(outside)
+                .where(0).equalTo(1)
+                .with(new JoinFunction<Tuple1<K>, Tuple2<K, K>, Tuple2<K, K>>() {
                     @Override
-                    public Tuple2<K, K> join(K first, Tuple2<K, K> second) throws Exception {
+                    public Tuple2<K, K> join(Tuple1<K> first, Tuple2<K, K> second) throws Exception {
                         return second;
                     }
                 }).join(previousResults)
@@ -191,11 +224,11 @@ public class SummarizedHITS<K, VV, EV>
         // ID, hub, authority
         DataSet<Tuple3<K, DoubleValue, DoubleValue>> initialScores =
                 previousResults
-                        .join(input.getVertexIds())
-                        .where(0).equalTo(keySelector)
-                        .with(new JoinFunction<Result<K>, K, Tuple3<K, DoubleValue, DoubleValue>>() {
+                        .join(verticesTuples)
+                        .where(0).equalTo(0)
+                        .with(new JoinFunction<Result<K>, Tuple1<K>, Tuple3<K, DoubleValue, DoubleValue>>() {
                             @Override
-                            public Tuple3<K, DoubleValue, DoubleValue> join(Result<K> first, K second) throws Exception {
+                            public Tuple3<K, DoubleValue, DoubleValue> join(Result<K> first, Tuple1<K> second) throws Exception {
                                 return Tuple3.of(first.f0, first.getHubScore(), first.getAuthorityScore());
                             }
                         });
