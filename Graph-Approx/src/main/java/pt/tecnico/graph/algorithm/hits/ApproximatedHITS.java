@@ -15,7 +15,9 @@ import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.library.link_analysis.HITS;
 import org.apache.flink.types.NullValue;
 import org.apache.flink.util.Collector;
+import pt.tecnico.graph.algorithm.GraphUtils;
 import pt.tecnico.graph.algorithm.SummarizedHITS;
+import pt.tecnico.graph.output.GraphOutputFormat;
 import pt.tecnico.graph.stream.GraphStreamHandler;
 import pt.tecnico.graph.stream.GraphUpdateTracker;
 import pt.tecnico.graph.stream.StreamProvider;
@@ -28,15 +30,27 @@ import java.util.Set;
  */
 public class ApproximatedHITS extends GraphStreamHandler<HITS.Result<Long>> {
     private ApproximatedHITSConfig config;
-
     private HITSQueryObserver observer;
     private TypeSerializerInputFormat<HITS.Result<Long>> resultInputFormat;
     private TypeSerializerOutputFormat<HITS.Result<Long>> resultOutputFormat;
     private TypeInformation<HITS.Result<Long>> resultTypeInfo;
     private DataSet<Long> computedVertices;
 
+    private GraphOutputFormat<HITS.Result<Long>> hubOutputFormat;
+    private GraphOutputFormat<HITS.Result<Long>> authorityOutputFormat;
+
     public ApproximatedHITS(StreamProvider<String> updateStream, Graph<Long, NullValue, NullValue> graph) {
         super(updateStream, graph);
+    }
+
+    public ApproximatedHITS setHubOutputFormat(GraphOutputFormat<HITS.Result<Long>> hubOutputFormat) {
+        this.hubOutputFormat = hubOutputFormat;
+        return this;
+    }
+
+    public ApproximatedHITS setAuthorityOutputFormat(GraphOutputFormat<HITS.Result<Long>> authorityOutputFormat) {
+        this.authorityOutputFormat = authorityOutputFormat;
+        return this;
     }
 
     @Override
@@ -152,8 +166,7 @@ public class ApproximatedHITS extends GraphStreamHandler<HITS.Result<Long>> {
 
     private DataSet<HITS.Result<Long>> computeApproximate(DataSet<HITS.Result<Long>> previousResults) throws Exception {
         Set<Long> updatedIds = graphUpdateTracker.updatedAboveThresholdVertexIds(config.getUpdatedRatioThreshold(), EdgeDirection.ALL);
-
-        computedVertices = env.fromCollection(updatedIds, TypeInformation.of(Long.class));
+        computedVertices = GraphUtils.expandedVertexIds(graph, env.fromCollection(updatedIds, TypeInformation.of(Long.class)), config.getNeighborhoodSize());
 
         SummarizedHITS<Long, NullValue, NullValue> summarizedHITS = new SummarizedHITS<Long, NullValue, NullValue>(30)
                 .setVerticesToCompute(computedVertices)
@@ -183,13 +196,13 @@ public class ApproximatedHITS extends GraphStreamHandler<HITS.Result<Long>> {
     }
 
     private void outputResult(String tag, DataSet<HITS.Result<Long>> ranks) {
-        outputFormat.setIteration(iteration);
+        hubOutputFormat.setIteration(iteration);
+        hubOutputFormat.setTags(tag, "hub");
+        ranks.sortPartition("f1.f0", Order.DESCENDING).first(config.getOutputSize()).output(hubOutputFormat);
 
-        outputFormat.setTags(tag, "hub");
-        ranks.sortPartition("f1.f0", Order.DESCENDING).first(config.getOutputSize()).output(outputFormat);
-        outputFormat.setTags(tag, "auth");
-        ranks.sortPartition("f1.f1", Order.DESCENDING).first(config.getOutputSize()).output(outputFormat);
-
+        authorityOutputFormat.setIteration(iteration);
+        authorityOutputFormat.setTags(tag, "auth");
+        ranks.sortPartition("f1.f1", Order.DESCENDING).first(config.getOutputSize()).output(authorityOutputFormat);
     }
 
     public ApproximatedHITSConfig getConfig() {

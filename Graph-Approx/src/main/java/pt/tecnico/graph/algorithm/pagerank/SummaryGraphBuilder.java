@@ -1,6 +1,7 @@
 package pt.tecnico.graph.algorithm.pagerank;
 
 import org.apache.flink.api.common.accumulators.LongCounter;
+import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.RichJoinFunction;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -15,19 +16,21 @@ import org.apache.flink.graph.Edge;
 import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.Vertex;
 import org.apache.flink.types.LongValue;
-import org.apache.flink.util.Collector;
+import pt.tecnico.graph.algorithm.GraphUtils;
+
+import java.io.Serializable;
 
 /**
  * Created by Renato on 05/07/2016.
  */
-public class SummaryGraphBuilder<K, VV, EV> {
+public class SummaryGraphBuilder<VV, EV> implements Serializable {
 
     private static final VertexKeySelector<Long> keySelector = new VertexKeySelector<>(TypeInformation.of(Long.class));
     private static final TypeInformation<Edge<Long, Double>> edgeTypeInfo = TypeInformation.of(new TypeHint<Edge<Long, Double>>() {
     });
     private static final TypeInformation<Tuple2<Long, Double>> tuple2TypeInfo = TypeInformation.of(new TypeHint<Tuple2<Long, Double>>() {
     });
-    private final Graph<Long, VV, EV> originalGraph;
+    private transient final Graph<Long, VV, EV> originalGraph;
     private final double initialRank;
 
     public SummaryGraphBuilder(Graph<Long, VV, EV> originalGraph, double initialRank) {
@@ -41,7 +44,7 @@ public class SummaryGraphBuilder<K, VV, EV> {
         DataSet<Tuple2<Long, LongValue>> outDegrees = originalGraph.outDegrees();
 
         // Expand the selected vertices to neighborhood given by level
-        DataSet<Long> expandedVertexIds = expandedVertexIds(updatedVertices, level);
+        DataSet<Long> expandedVertexIds = GraphUtils.expandedVertexIds(originalGraph, updatedVertices, level);
 
         // Generate vertices with previous rank, or initialRank (for new vertices), as values
         DataSet<Vertex<Long, Double>> kernelVertices = expandedVertexIds
@@ -49,8 +52,22 @@ public class SummaryGraphBuilder<K, VV, EV> {
                 .where(keySelector).equalTo(0)
                 .with(new KernelVertexJoinFunction(initialRank));
 
+        Graph<Long, Double, Double> doubleGraph = originalGraph
+                .mapVertices(new MapFunction<Vertex<Long, VV>, Double>() {
+                    @Override
+                    public Double map(Vertex<Long, VV> longVVVertex) throws Exception {
+                        return 0.0;
+                    }
+                })
+                .mapEdges(new MapFunction<Edge<Long, EV>, Double>() {
+                    @Override
+                    public Double map(Edge<Long, EV> longEVEdge) throws Exception {
+                        return 0.0;
+                    }
+                });
+
         // Select the edges between the kernel vertices, with 1/(degree of source) as the value
-        DataSet<Edge<Long, Double>> internalEdges = selectEdges(kernelVertices)
+        DataSet<Edge<Long, Double>> internalEdges = GraphUtils.selectEdges(doubleGraph, kernelVertices)
                 .join(outDegrees)
                 .where(0).equalTo(0)
                 .with((edge, degree) -> {
@@ -61,7 +78,7 @@ public class SummaryGraphBuilder<K, VV, EV> {
                 .withForwardedFieldsFirst("f0;f1");
 
         // Select all the other edges, converted to the correct type
-        DataSet<Edge<Long, Double>> externalEdges = externalEdges(internalEdges);
+        DataSet<Edge<Long, Double>> externalEdges = GraphUtils.externalEdges(doubleGraph, internalEdges);
 
         // Calculate the ranks to be sent by the big vertex.
         DataSet<Tuple2<Long, Double>> ranksToSend = previousRanks.join(outDegrees)
@@ -97,51 +114,6 @@ public class SummaryGraphBuilder<K, VV, EV> {
         DataSet<Edge<Long, Double>> edges = internalEdges.union(edgesToInside);
 
         return Graph.fromDataSet(vertices, edges, originalGraph.getContext());
-    }
-
-    private DataSet<Long> expandedVertexIds(DataSet<Long> originalVertexIds, int level) throws Exception {
-        DataSet<Long> expandedIds = originalVertexIds;
-        VertexKeySelector<Long> keySelector = new VertexKeySelector<>(TypeInformation.of(Long.class));
-        while (level > 0) {
-            DataSet<Long> firstNeighbours = expandedIds
-                    .join(originalGraph.getEdges())
-                    .where(keySelector).equalTo(0)
-                    .with((id, e) -> e.getTarget())
-                    .returns(expandedIds.getType())
-                    .withForwardedFieldsSecond("f1->*");
-
-            expandedIds = expandedIds.union(firstNeighbours).distinct();
-            level--;
-        }
-
-        return expandedIds;
-    }
-
-    private DataSet<Edge<Long, Double>> selectEdges(DataSet<Vertex<Long, Double>> vertices) {
-        return vertices
-                .joinWithHuge(originalGraph.getEdges())
-                .where(0).equalTo(0)
-                .with((source, edge) -> edge)
-                .returns(originalGraph.getEdges().getType())
-                .withForwardedFieldsSecond("*->*")
-                .join(vertices)
-                .where(1).equalTo(0)
-                .with((e, v) -> new Edge<>(e.getSource(), e.getTarget(), 0.0))
-                .returns(edgeTypeInfo)
-                .withForwardedFieldsFirst("f0;f1")
-                .distinct(0, 1);
-    }
-
-    private DataSet<Edge<Long, Double>> externalEdges(DataSet<Edge<Long, Double>> edgesToBeRemoved) {
-        return originalGraph.getEdges().coGroup(edgesToBeRemoved)
-                .where(0, 1).equalTo(0, 1)
-                .with((Iterable<Edge<Long, EV>> edge, Iterable<Edge<Long, Double>> edgeToBeRemoved, Collector<Edge<Long, Double>> out) -> {
-                    if (!edgeToBeRemoved.iterator().hasNext()) {
-                        for (Edge<Long, EV> next : edge) {
-                            out.collect(new Edge<>(next.getSource(), next.getTarget(), 0.0));
-                        }
-                    }
-                }).returns(edgeTypeInfo);
     }
 
     @FunctionAnnotation.ForwardedFieldsFirst("*->f0")
