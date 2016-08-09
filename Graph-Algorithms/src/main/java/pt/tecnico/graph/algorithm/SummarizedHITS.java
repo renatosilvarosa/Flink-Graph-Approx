@@ -133,6 +133,9 @@ public class SummarizedHITS<K, VV, EV>
     public DataSet<Result<K>> runInternal(Graph<K, VV, EV> input)
             throws Exception {
 
+        GraphUtils.EdgeToTuple2<K, EV> mapper = new GraphUtils.EdgeToTuple2<>();
+        GraphUtils.VertexKeySelector<K> keySelector = new GraphUtils.VertexKeySelector<>(input.getVertexIds().getType());
+
         DataSet<Tuple1<K>> verticesTuples = verticesToCompute.map(new MapFunction<K, Tuple1<K>>() {
             @Override
             public Tuple1<K> map(K value) throws Exception {
@@ -140,44 +143,16 @@ public class SummarizedHITS<K, VV, EV>
             }
         });
 
-        DataSet<Tuple2<K, K>> edges = input.getEdgeIds()
-                .join(verticesTuples)
-                .where(0).equalTo(0)
-                .with(new JoinFunction<Tuple2<K, K>, Tuple1<K>, Tuple2<K, K>>() {
-                    @Override
-                    public Tuple2<K, K> join(Tuple2<K, K> first, Tuple1<K> second) throws Exception {
-                        return first;
-                    }
-                }).returns(input.getEdgeIds().getType())
-                .withForwardedFieldsFirst("*->*")
-                .join(verticesTuples)
-                .where(1).equalTo(0)
-                .with(new JoinFunction<Tuple2<K, K>, Tuple1<K>, Tuple2<K, K>>() {
-                    @Override
-                    public Tuple2<K, K> join(Tuple2<K, K> first, Tuple1<K> second) throws Exception {
-                        return first;
-                    }
-                }).returns(input.getEdgeIds().getType())
-                .withForwardedFieldsFirst("*->*");
+        DataSet<Edge<K, EV>> edgeDataSet = GraphUtils.selectEdgesWithIds(input, verticesToCompute);
+        DataSet<Tuple2<K, K>> edges = edgeDataSet.map(mapper);
 
-        DataSet<Tuple2<K, K>> outside = input.getEdgeIds().coGroup(edges)
-                .where(0, 1).equalTo(0, 1)
-                .with(new CoGroupFunction<Tuple2<K, K>, Tuple2<K, K>, Tuple2<K, K>>() {
-                    @Override
-                    public void coGroup(Iterable<Tuple2<K, K>> first, Iterable<Tuple2<K, K>> second, Collector<Tuple2<K, K>> out) throws Exception {
-                        if (!second.iterator().hasNext()) {
-                            for (Tuple2<K, K> next : first) {
-                                out.collect(next);
-                            }
-                        }
-                    }
-                });
+        DataSet<Tuple2<K, K>> outside = GraphUtils.externalEdges(input, edgeDataSet).map(mapper);
 
-        DataSet<Result<K>> sumToOutside = verticesTuples.join(outside)
-                .where(0).equalTo(0)
-                .with(new JoinFunction<Tuple1<K>, Tuple2<K, K>, Tuple2<K, K>>() {
+        DataSet<Result<K>> sumToOutside = verticesToCompute.join(outside)
+                .where(keySelector).equalTo(0)
+                .with(new JoinFunction<K, Tuple2<K, K>, Tuple2<K, K>>() {
                     @Override
-                    public Tuple2<K, K> join(Tuple1<K> first, Tuple2<K, K> second) throws Exception {
+                    public Tuple2<K, K> join(K first, Tuple2<K, K> second) throws Exception {
                         return second;
                     }
                 }).join(previousResults)
@@ -197,11 +172,11 @@ public class SummarizedHITS<K, VV, EV>
                     }
                 });
 
-        DataSet<Result<K>> sumToInside = verticesTuples.join(outside)
-                .where(0).equalTo(1)
-                .with(new JoinFunction<Tuple1<K>, Tuple2<K, K>, Tuple2<K, K>>() {
+        DataSet<Result<K>> sumToInside = verticesToCompute.join(outside)
+                .where(keySelector).equalTo(1)
+                .with(new JoinFunction<K, Tuple2<K, K>, Tuple2<K, K>>() {
                     @Override
-                    public Tuple2<K, K> join(Tuple1<K> first, Tuple2<K, K> second) throws Exception {
+                    public Tuple2<K, K> join(K first, Tuple2<K, K> second) throws Exception {
                         return second;
                     }
                 }).join(previousResults)
@@ -334,66 +309,6 @@ public class SummarizedHITS<K, VV, EV>
                 .map(new TranslateResult<K>())
                 .setParallelism(parallelism)
                 .name("Map result");
-    }
-
-    /**
-     * Map edges and remove the edge value.
-     *
-     * @param <T>  ID type
-     * @param <ET> edge value type
-     * @see Graph.ExtractEdgeIDsMapper
-     */
-    @FunctionAnnotation.ForwardedFields("0; 1")
-    private static class ExtractEdgeIDs<T, ET>
-            implements FlatMapFunction<Edge<T, ET>, Tuple2<T, T>> {
-        private Tuple2<T, T> output = new Tuple2<>();
-
-        @Override
-        public void flatMap(Edge<T, ET> value, Collector<Tuple2<T, T>> out)
-                throws Exception {
-            output.f0 = value.f0;
-            output.f1 = value.f1;
-            out.collect(output);
-        }
-    }
-
-    /**
-     * Initialize vertices' authority scores by assigning each vertex with an
-     * initial hub score of 1.0. The hub scores are initialized to zero since
-     * these will be computed based on the initial authority scores.
-     * <p>
-     * The initial scores are non-normalized.
-     *
-     * @param <T> ID type
-     */
-    @FunctionAnnotation.ForwardedFields("1->0")
-    private static class InitializeScores<T>
-            implements MapFunction<Tuple2<T, T>, Tuple3<T, DoubleValue, DoubleValue>> {
-        private Tuple3<T, DoubleValue, DoubleValue> output = new Tuple3<>(null, new DoubleValue(0.0), new DoubleValue(1.0));
-
-        @Override
-        public Tuple3<T, DoubleValue, DoubleValue> map(Tuple2<T, T> value) throws Exception {
-            output.f0 = value.f1;
-            return output;
-        }
-    }
-
-    /**
-     * Sum vertices' hub and authority scores.
-     *
-     * @param <T> ID type
-     */
-    @FunctionAnnotation.ForwardedFieldsFirst("0")
-    @FunctionAnnotation.ForwardedFieldsSecond("0")
-    private static class SumScores<T>
-            implements ReduceFunction<Tuple3<T, DoubleValue, DoubleValue>> {
-        @Override
-        public Tuple3<T, DoubleValue, DoubleValue> reduce(Tuple3<T, DoubleValue, DoubleValue> left, Tuple3<T, DoubleValue, DoubleValue> right)
-                throws Exception {
-            left.f1.setValue(left.f1.getValue() + right.f1.getValue());
-            left.f2.setValue(left.f2.getValue() + right.f2.getValue());
-            return left;
-        }
     }
 
     /**
