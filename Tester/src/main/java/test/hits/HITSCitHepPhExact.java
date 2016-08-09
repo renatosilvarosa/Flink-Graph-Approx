@@ -36,17 +36,17 @@ public class HITSCitHepPhExact {
 
             ApproximatedHITS approximatedHITS = new ApproximatedHITS(new SocketStreamProvider("localhost", 1234), graph);
 
-            HITSCsvOutputFormat hubOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/CitHepPh/HITS/", System.lineSeparator(), ";", false, true);
+            HITSCsvOutputFormat hubOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/HITS/CitHepPh-exact", System.lineSeparator(), ";", false, true);
             hubOutputFormat.setName("exact_hits");
             approximatedHITS.setHubOutputFormat(hubOutputFormat);
 
-            HITSCsvOutputFormat authOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/CitHepPh/HITS/", System.lineSeparator(), ";", false, true);
+            HITSCsvOutputFormat authOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/HITS/CitHepPh-exact", System.lineSeparator(), ";", false, true);
             authOutputFormat.setName("exact_hits");
             approximatedHITS.setAuthorityOutputFormat(hubOutputFormat);
 
             approximatedHITS.setConfig(config);
 
-            String dir = localDir + "/Statistics/CitHepPh/HITS";
+            String dir = localDir + "/Statistics/HITS/CitHepPh";
             approximatedHITS.setObserver(new ExactHITSStatistics(dir, args[4]));
 
             approximatedHITS.start();

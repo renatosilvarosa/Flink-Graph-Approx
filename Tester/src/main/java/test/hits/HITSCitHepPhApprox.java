@@ -16,7 +16,9 @@ public class HITSCitHepPhApprox {
         String localDir = args[0];
         String remoteDir = args[1];
         int iterations = Integer.parseInt(args[2]);
-        int outputSize = Integer.parseInt(args[3]);
+        double threshold = Double.parseDouble(args[3]);
+        int neighborhoodSize = Integer.parseInt(args[4]);
+        int outputSize = Integer.parseInt(args[5]);
 
         ExecutionEnvironment env =
                 ExecutionEnvironment.createRemoteEnvironment("146.193.41.145", 6123,
@@ -25,7 +27,7 @@ public class HITSCitHepPhApprox {
         //ExecutionEnvironment.createLocalEnvironment();
 
         env.getConfig()
-                //.disableSysoutLogging()
+                .disableSysoutLogging()
                 .setParallelism(1);
 
         try {
@@ -37,22 +39,25 @@ public class HITSCitHepPhApprox {
 
             ApproximatedHITSConfig config = new ApproximatedHITSConfig()
                     .setIterations(iterations)
+                    .setUpdatedRatioThreshold(threshold)
+                    .setNeighborhoodSize(neighborhoodSize)
                     .setOutputSize(outputSize);
 
             ApproximatedHITS approximatedHITS = new ApproximatedHITS(new SocketStreamProvider("localhost", 1234), graph);
 
             approximatedHITS.setConfig(config);
 
-            HITSCsvOutputFormat hubOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/CitHepPh/HITS/", System.lineSeparator(), ";", false, true);
+            String outputDir = String.format("%s/Results/HITS/CitHepPh-%02.2f-%02d", remoteDir, threshold, neighborhoodSize);
+            HITSCsvOutputFormat hubOutputFormat = new HITSCsvOutputFormat(outputDir, System.lineSeparator(), ";", false, true);
             hubOutputFormat.setName("approx_hits");
             approximatedHITS.setHubOutputFormat(hubOutputFormat);
 
-            HITSCsvOutputFormat authOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/CitHepPh/HITS/", System.lineSeparator(), ";", false, true);
+            HITSCsvOutputFormat authOutputFormat = new HITSCsvOutputFormat(outputDir, System.lineSeparator(), ";", false, true);
             authOutputFormat.setName("approx_hits");
             approximatedHITS.setAuthorityOutputFormat(authOutputFormat);
 
-            String dir = localDir + "/Statistics/CitHepPh/HITS";
-            approximatedHITS.setObserver(new ApproximatedHITSStatistics(dir, args[4]));
+            String dir = localDir + "/Statistics/HITS/CitHepPh";
+            approximatedHITS.setObserver(new ApproximatedHITSStatistics(dir, args[6]));
 
             approximatedHITS.start();
 
