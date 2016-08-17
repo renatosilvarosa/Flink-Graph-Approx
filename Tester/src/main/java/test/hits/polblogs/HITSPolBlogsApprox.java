@@ -6,7 +6,7 @@ import org.apache.flink.types.NullValue;
 import pt.tecnico.graph.algorithm.hits.ApproximatedHITS;
 import pt.tecnico.graph.algorithm.hits.ApproximatedHITSConfig;
 import pt.tecnico.graph.algorithm.hits.HITSCsvOutputFormat;
-import pt.tecnico.graph.stream.SocketStreamProvider;
+import pt.tecnico.graph.stream.FileStreamProvider;
 import test.hits.ApproximatedHITSStatistics;
 
 /**
@@ -40,8 +40,12 @@ public class HITSPolBlogsApprox {
                     .setNeighborhoodSize(neighborhoodSize)
                     .setOutputSize(outputSize);
 
+            FileStreamProvider<String> streamProvider = new FileStreamProvider<>(localDir + "/Datasets/polblogs/polblogs_cont.csv", s -> {
+                Thread.sleep(10);
+                return s;
+            });
 
-            ApproximatedHITS approximatedHITS = new ApproximatedHITS(new SocketStreamProvider("localhost", 1234), graph);
+            ApproximatedHITS approximatedHITS = new ApproximatedHITS(streamProvider, graph);
 
             approximatedHITS.setConfig(config);
 
