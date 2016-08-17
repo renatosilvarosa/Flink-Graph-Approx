@@ -8,7 +8,6 @@ from rank_evaluator import evaluate
 lists_dir = sys.argv[1]
 exact_pr_dir = sys.argv[2]
 p_value = float(sys.argv[3])
-dest = sys.argv[4]
 
 pattern = re.compile("\d{4}")
 
