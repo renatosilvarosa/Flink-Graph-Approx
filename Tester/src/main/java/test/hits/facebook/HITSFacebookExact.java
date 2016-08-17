@@ -1,4 +1,4 @@
-package test.hits;
+package test.hits.facebook;
 
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.graph.Graph;
@@ -7,11 +7,12 @@ import pt.tecnico.graph.algorithm.hits.ApproximatedHITS;
 import pt.tecnico.graph.algorithm.hits.ApproximatedHITSConfig;
 import pt.tecnico.graph.algorithm.hits.HITSCsvOutputFormat;
 import pt.tecnico.graph.stream.SocketStreamProvider;
+import test.hits.ExactHITSStatistics;
 
 /**
  * Created by Renato on 09/04/2016.
  */
-public class HITSCitHepPhExact {
+public class HITSFacebookExact {
     public static void main(String[] args) {
         String localDir = args[0];
         String remoteDir = args[1];
@@ -25,7 +26,7 @@ public class HITSCitHepPhExact {
         env.getConfig().disableSysoutLogging().setParallelism(1);
 
         try {
-            Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader("/home/rrosa/Datasets/Cit-HepPh/Cit-HepPh-init.txt", env)
+            Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader(remoteDir + "/Datasets/facebook/facebook-links-init.txt", env)
                     .ignoreCommentsEdges("#")
                     .fieldDelimiterEdges("\t")
                     .keyType(Long.class);
@@ -34,19 +35,19 @@ public class HITSCitHepPhExact {
                     .setIterations(iterations)
                     .setOutputSize(outputSize);
 
-            ApproximatedHITS approximatedHITS = new ApproximatedHITS(new SocketStreamProvider("localhost", 1234), graph);
+            ApproximatedHITS approximatedHITS = new ApproximatedHITS(new SocketStreamProvider("localhost", 2345), graph);
 
-            HITSCsvOutputFormat hubOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/HITS/CitHepPh-exact", System.lineSeparator(), ";", false, true);
+            HITSCsvOutputFormat hubOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/HITS/facebook-exact", System.lineSeparator(), ";", false, true);
             hubOutputFormat.setName("exact_hits");
             approximatedHITS.setHubOutputFormat(hubOutputFormat);
 
-            HITSCsvOutputFormat authOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/HITS/CitHepPh-exact", System.lineSeparator(), ";", false, true);
+            HITSCsvOutputFormat authOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/HITS/facebook-exact", System.lineSeparator(), ";", false, true);
             authOutputFormat.setName("exact_hits");
-            approximatedHITS.setAuthorityOutputFormat(hubOutputFormat);
+            approximatedHITS.setAuthorityOutputFormat(authOutputFormat);
 
             approximatedHITS.setConfig(config);
 
-            String dir = localDir + "/Statistics/HITS/CitHepPh";
+            String dir = localDir + "/Statistics/HITS/facebook";
             approximatedHITS.setObserver(new ExactHITSStatistics(dir, args[4]));
 
             approximatedHITS.start();

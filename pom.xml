@@ -6,14 +6,13 @@
 
     <groupId>pt.tecnico</groupId>
     <artifactId>flink-graph-approx-parent</artifactId>
-    <version>0.2</version>
+    <version>0.3</version>
     <packaging>pom</packaging>
 
     <modules>
         <module>Graph-Approx</module>
         <module>Graph-Algorithms</module>
         <module>Tester</module>
-        <module>Graph-Sampler</module>
     </modules>
 
     <properties>

@@ -1,9 +1,7 @@
 package test.hits;
 
 import org.apache.flink.api.common.JobExecutionResult;
-import org.apache.flink.api.common.operators.Order;
 import org.apache.flink.api.java.DataSet;
-import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.library.link_analysis.HITS;
 import org.apache.flink.types.NullValue;
@@ -39,13 +37,6 @@ public class ExactHITSStatistics extends HITSStatistics {
 
             printStream.format("%d;%d;%d;%d%n", id, nVertices, nEdges, jobExecutionResult.getNetRuntime());
             printStream.flush();
-
-            result.sortPartition("f1.f0", Order.DESCENDING).project(0).writeAsCsv(String.format("%s/result-hub-%02d.csv", dir, id),
-                    System.lineSeparator(), ";", FileSystem.WriteMode.OVERWRITE);
-
-            result.sortPartition("f1.f1", Order.DESCENDING).project(0).writeAsCsv(String.format("%s/result-auth-%02d.csv", dir, id),
-                    System.lineSeparator(), ";", FileSystem.WriteMode.OVERWRITE);
-
         } catch (Exception e) {
             e.printStackTrace();
         }

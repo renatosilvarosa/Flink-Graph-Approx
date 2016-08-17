@@ -11,9 +11,9 @@ import pt.tecnico.graph.stream.GraphUpdateTracker;
 /**
  * Created by Renato on 26/07/2016.
  */
-class ApproximatedPRStatistics extends PRStatistics {
+public class ApproximatedPRStatistics extends PRStatistics {
 
-    ApproximatedPRStatistics(String dir, String fileName) {
+    public ApproximatedPRStatistics(String dir, String fileName) {
         super(fileName, dir);
     }
 

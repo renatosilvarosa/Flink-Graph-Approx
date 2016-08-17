@@ -1,4 +1,4 @@
-package test.pagerank;
+package test.pagerank.cithepph;
 
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.graph.Graph;
@@ -7,6 +7,7 @@ import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRank;
 import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRankConfig;
 import pt.tecnico.graph.algorithm.pagerank.PageRankCsvOutputFormat;
 import pt.tecnico.graph.stream.SocketStreamProvider;
+import test.pagerank.ApproximatedPRStatistics;
 
 /**
  * Created by Renato on 09/04/2016.
