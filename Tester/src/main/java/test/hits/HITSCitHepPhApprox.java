@@ -43,11 +43,12 @@ public class HITSCitHepPhApprox {
                     .setNeighborhoodSize(neighborhoodSize)
                     .setOutputSize(outputSize);
 
+
             ApproximatedHITS approximatedHITS = new ApproximatedHITS(new SocketStreamProvider("localhost", 1234), graph);
 
             approximatedHITS.setConfig(config);
 
-            String outputDir = String.format("%s/Results/HITS/CitHepPh-%02.2f-%02d", remoteDir, threshold, neighborhoodSize);
+            String outputDir = String.format("%s/Results/HITS/CitHepPh-%02.2f-%d", remoteDir, threshold, neighborhoodSize);
             HITSCsvOutputFormat hubOutputFormat = new HITSCsvOutputFormat(outputDir, System.lineSeparator(), ";", false, true);
             hubOutputFormat.setName("approx_hits");
             approximatedHITS.setHubOutputFormat(hubOutputFormat);

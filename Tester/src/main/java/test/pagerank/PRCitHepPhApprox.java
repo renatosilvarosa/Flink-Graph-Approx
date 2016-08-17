@@ -39,7 +39,7 @@ public class PRCitHepPhApprox {
                     .setNeighborhoodSize(neighborhoodSize)
                     .setOutputSize(outputSize);
 
-            String outputDir = String.format("%s/Results/CitHepPh-%02.2f-%02d", remoteDir, threshold, neighborhoodSize);
+            String outputDir = String.format("%s/Results/CitHepPh-%02.2f-%d", remoteDir, threshold, neighborhoodSize);
             PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat(outputDir, System.lineSeparator(), ";", false, true);
             outputFormat.setName("approx_PR");
 
