@@ -14,7 +14,7 @@ import org.apache.flink.types.NullValue;
 public class Test {
     public static void main(String[] args) {
         ExecutionEnvironment env = ExecutionEnvironment.createRemoteEnvironment("146.193.41.145", 6123,
-                "flink-graph-approx-0.2.jar", "flink-graph-algorithms-0.2.jar");
+                "flink-graph-approx-0.3.jar", "flink-graph-algorithms-0.3.jar");
 
         Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader("/home/rrosa/Datasets/Cit-HepPh/Cit-HepPh-init.txt", env)
                 .ignoreCommentsEdges("#")

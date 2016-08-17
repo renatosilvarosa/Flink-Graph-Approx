@@ -20,7 +20,7 @@ public class HITSPolBlogsExact {
         int outputSize = Integer.parseInt(args[3]);
 
         ExecutionEnvironment env = ExecutionEnvironment.createRemoteEnvironment("146.193.41.145", 6123,
-                "flink-graph-approx-0.2.jar", "flink-graph-algorithms-0.2.jar"
+                "flink-graph-approx-0.3.jar", "flink-graph-algorithms-0.3.jar"
         );
 
         env.getConfig()
