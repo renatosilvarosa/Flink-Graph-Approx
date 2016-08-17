@@ -1,13 +1,12 @@
 #! /usr/bin/python3
 
 import sys
-from glob import glob
 from pathlib import Path
 
-# stats_dir = "/home/rrosa/Statistics/CitHepPh/PR"
-stats_dir = "D:\Documents\Dissertação\Statistics\CitHepPh\PR"
-# eval_dir = "/home/rrosa/Eval"
-eval_dir = "D:\Documents\Dissertação\Eval\\"
+stats_dir = sys.argv[1]
+eval_dir = sys.argv[2]
+dataset = sys.argv[3]
+
 iterations = 30
 base_threshold = 0.0
 top_threshold = 0.25
@@ -15,12 +14,8 @@ step_threshold = 0.05
 base_neigh = 0
 top_neigh = 3
 output_size = 1000
-result_prefix = "PR-CitHepPh"
 
 p = Path(stats_dir)
-p.glob("*.csv")
-file_names = glob(stats_dir + '/*.csv')
-
 lines_dict = dict()
 
 for file in p.glob("*.csv"):

@@ -1,4 +1,4 @@
-package test.pagerank.polblogs;
+package test.pr.polblogs;
 
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.graph.Graph;
@@ -7,7 +7,7 @@ import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRank;
 import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRankConfig;
 import pt.tecnico.graph.algorithm.pagerank.PageRankCsvOutputFormat;
 import pt.tecnico.graph.stream.FileStreamProvider;
-import test.pagerank.ExactPRStatistics;
+import test.pr.ExactPRStatistics;
 
 /**
  * Created by Renato on 09/04/2016.

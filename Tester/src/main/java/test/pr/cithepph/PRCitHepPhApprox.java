@@ -1,4 +1,4 @@
-package test.pagerank.facebook;
+package test.pr.cithepph;
 
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.graph.Graph;
@@ -7,12 +7,12 @@ import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRank;
 import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRankConfig;
 import pt.tecnico.graph.algorithm.pagerank.PageRankCsvOutputFormat;
 import pt.tecnico.graph.stream.SocketStreamProvider;
-import test.pagerank.ApproximatedPRStatistics;
+import test.pr.ApproximatedPRStatistics;
 
 /**
  * Created by Renato on 09/04/2016.
  */
-public class PRFacebookApprox {
+public class PRCitHepPhApprox {
     public static void main(String[] args) {
         String localDir = args[0];
         String remoteDir = args[1];
@@ -28,7 +28,7 @@ public class PRFacebookApprox {
         env.getConfig().disableSysoutLogging().setParallelism(1);
 
         try {
-            Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader(remoteDir + "/Datasets/facebook/facebook-links-init.txt", env)
+            Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader("/home/rrosa/Datasets/Cit-HepPh/Cit-HepPh-init.txt", env)
                     .ignoreCommentsEdges("#")
                     .fieldDelimiterEdges("\t")
                     .keyType(Long.class);
@@ -40,16 +40,16 @@ public class PRFacebookApprox {
                     .setNeighborhoodSize(neighborhoodSize)
                     .setOutputSize(outputSize);
 
-            String outputDir = String.format("%s/Results/facebook-%02.2f-%d", remoteDir, threshold, neighborhoodSize);
+            String outputDir = String.format("%s/Results/CitHepPh-%02.2f-%d", remoteDir, threshold, neighborhoodSize);
             PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat(outputDir, System.lineSeparator(), ";", false, true);
             outputFormat.setName("approx_PR");
 
-            ApproximatedPageRank approximatedPageRank = new ApproximatedPageRank(new SocketStreamProvider("localhost", 2345),
+            ApproximatedPageRank approximatedPageRank = new ApproximatedPageRank(new SocketStreamProvider("localhost", 1234),
                     graph);
             approximatedPageRank.setConfig(config);
             approximatedPageRank.setOutputFormat(outputFormat);
 
-            String dir = localDir + "/Statistics/facebook/PR";
+            String dir = localDir + "/Statistics/CitHepPh/PR";
             approximatedPageRank.setObserver(new ApproximatedPRStatistics(dir, args[6]));
 
             approximatedPageRank.start();

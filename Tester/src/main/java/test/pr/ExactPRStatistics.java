@@ -1,4 +1,4 @@
-package test.pagerank;
+package test.pr;
 
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.java.DataSet;

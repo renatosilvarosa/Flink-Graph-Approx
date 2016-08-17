@@ -1,4 +1,4 @@
-package test.pagerank;
+package test.pr;
 
 import pt.tecnico.graph.algorithm.pagerank.PageRankQueryObserver;
 
