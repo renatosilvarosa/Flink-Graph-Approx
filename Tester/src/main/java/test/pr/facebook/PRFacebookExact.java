@@ -26,7 +26,7 @@ public class PRFacebookExact {
         env.getConfig().disableSysoutLogging().setParallelism(1);
 
         try {
-            Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader(remoteDir + "/Datasets/facebook/facebook-links-init.txt", env)
+            Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader(remoteDir + "/Datasets/Facebook/facebook-links-init.txt", env)
                     .ignoreCommentsEdges("#")
                     .fieldDelimiterEdges("\t")
                     .keyType(Long.class);
@@ -45,7 +45,7 @@ public class PRFacebookExact {
             approximatedPageRank.setConfig(config);
             approximatedPageRank.setOutputFormat(outputFormat);
 
-            String dir = localDir + "/Statistics/PR/facebook";
+            String dir = localDir + "/Statistics/PR/Facebook";
             approximatedPageRank.setObserver(new ExactPRStatistics(dir, args[4]));
 
             approximatedPageRank.start();

@@ -28,7 +28,7 @@ public class PRFacebookApprox {
         env.getConfig().disableSysoutLogging().setParallelism(1);
 
         try {
-            Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader(remoteDir + "/Datasets/facebook/facebook-links-init.txt", env)
+            Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader(remoteDir + "/Datasets/Facebook/facebook-links-init.txt", env)
                     .ignoreCommentsEdges("#")
                     .fieldDelimiterEdges("\t")
                     .keyType(Long.class);
@@ -40,7 +40,7 @@ public class PRFacebookApprox {
                     .setNeighborhoodSize(neighborhoodSize)
                     .setOutputSize(outputSize);
 
-            String outputDir = String.format("%s/Results/PR/facebook-%02.2f-%d", remoteDir, threshold, neighborhoodSize);
+            String outputDir = String.format("%s/Results/PR/Facebook-%02.2f-%d", remoteDir, threshold, neighborhoodSize);
             PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat(outputDir, System.lineSeparator(), ";", false, true);
             outputFormat.setName("approx_PR");
 
@@ -49,7 +49,7 @@ public class PRFacebookApprox {
             approximatedPageRank.setConfig(config);
             approximatedPageRank.setOutputFormat(outputFormat);
 
-            String dir = localDir + "/Statistics/PR/facebook";
+            String dir = localDir + "/Statistics/PR/Facebook";
             approximatedPageRank.setObserver(new ApproximatedPRStatistics(dir, args[6]));
 
             approximatedPageRank.start();
