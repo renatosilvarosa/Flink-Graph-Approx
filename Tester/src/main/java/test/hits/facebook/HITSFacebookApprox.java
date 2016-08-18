@@ -43,7 +43,7 @@ public class HITSFacebookApprox {
 
             approximatedHITS.setConfig(config);
 
-            String outputDir = String.format("%s/Results/HITS/facebook-%02.2f-%d", remoteDir, threshold, neighborhoodSize);
+            String outputDir = String.format("%s/Results/HITS/Facebook-%02.2f-%d", remoteDir, threshold, neighborhoodSize);
             HITSCsvOutputFormat hubOutputFormat = new HITSCsvOutputFormat(outputDir, System.lineSeparator(), ";", false, true);
             hubOutputFormat.setName("approx_hits");
             approximatedHITS.setHubOutputFormat(hubOutputFormat);
@@ -52,7 +52,7 @@ public class HITSFacebookApprox {
             authOutputFormat.setName("approx_hits");
             approximatedHITS.setAuthorityOutputFormat(authOutputFormat);
 
-            String dir = localDir + "/Statistics/HITS/facebook";
+            String dir = localDir + "/Statistics/HITS/Facebook";
             approximatedHITS.setObserver(new ApproximatedHITSStatistics(dir, args[6]));
 
             approximatedHITS.start();

@@ -40,7 +40,7 @@ public class PRFacebookApprox {
                     .setNeighborhoodSize(neighborhoodSize)
                     .setOutputSize(outputSize);
 
-            String outputDir = String.format("%s/Results/facebook-%02.2f-%d", remoteDir, threshold, neighborhoodSize);
+            String outputDir = String.format("%s/Results/PR/facebook-%02.2f-%d", remoteDir, threshold, neighborhoodSize);
             PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat(outputDir, System.lineSeparator(), ";", false, true);
             outputFormat.setName("approx_PR");
 
@@ -49,7 +49,7 @@ public class PRFacebookApprox {
             approximatedPageRank.setConfig(config);
             approximatedPageRank.setOutputFormat(outputFormat);
 
-            String dir = localDir + "/Statistics/facebook/PR";
+            String dir = localDir + "/Statistics/PR/facebook";
             approximatedPageRank.setObserver(new ApproximatedPRStatistics(dir, args[6]));
 
             approximatedPageRank.start();

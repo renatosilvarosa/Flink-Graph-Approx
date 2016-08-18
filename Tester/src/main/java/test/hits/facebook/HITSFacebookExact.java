@@ -37,17 +37,17 @@ public class HITSFacebookExact {
 
             ApproximatedHITS approximatedHITS = new ApproximatedHITS(new SocketStreamProvider("localhost", 2345), graph);
 
-            HITSCsvOutputFormat hubOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/HITS/facebook-exact", System.lineSeparator(), ";", false, true);
+            HITSCsvOutputFormat hubOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/HITS/Facebook-exact", System.lineSeparator(), ";", false, true);
             hubOutputFormat.setName("exact_hits");
             approximatedHITS.setHubOutputFormat(hubOutputFormat);
 
-            HITSCsvOutputFormat authOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/HITS/facebook-exact", System.lineSeparator(), ";", false, true);
+            HITSCsvOutputFormat authOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/HITS/Facebook-exact", System.lineSeparator(), ";", false, true);
             authOutputFormat.setName("exact_hits");
             approximatedHITS.setAuthorityOutputFormat(authOutputFormat);
 
             approximatedHITS.setConfig(config);
 
-            String dir = localDir + "/Statistics/HITS/facebook";
+            String dir = localDir + "/Statistics/HITS/Facebook";
             approximatedHITS.setObserver(new ExactHITSStatistics(dir, args[4]));
 
             approximatedHITS.start();

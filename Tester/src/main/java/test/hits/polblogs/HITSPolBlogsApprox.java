@@ -49,7 +49,7 @@ public class HITSPolBlogsApprox {
 
             approximatedHITS.setConfig(config);
 
-            String outputDir = String.format("%s/Results/HITS/polblogs-%02.2f-%d", remoteDir, threshold, neighborhoodSize);
+            String outputDir = String.format("%s/Results/HITS/PolBlogs-%02.2f-%d", remoteDir, threshold, neighborhoodSize);
             HITSCsvOutputFormat hubOutputFormat = new HITSCsvOutputFormat(outputDir, System.lineSeparator(), ";", false, true);
             hubOutputFormat.setName("approx_hits");
             approximatedHITS.setHubOutputFormat(hubOutputFormat);
@@ -58,7 +58,7 @@ public class HITSPolBlogsApprox {
             authOutputFormat.setName("approx_hits");
             approximatedHITS.setAuthorityOutputFormat(authOutputFormat);
 
-            String dir = localDir + "/Statistics/HITS/polblogs";
+            String dir = localDir + "/Statistics/HITS/PolBlogs";
             approximatedHITS.setObserver(new ApproximatedHITSStatistics(dir, args[6]));
 
             approximatedHITS.start();

@@ -36,7 +36,7 @@ public class PRFacebookExact {
                     .setIterations(iterations)
                     .setOutputSize(outputSize);
 
-            String outputDir = String.format("%s/Results/facebook-exact", remoteDir);
+            String outputDir = String.format("%s/Results/PR/facebook-exact", remoteDir);
             PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat(outputDir, System.lineSeparator(), ";", false, true);
             outputFormat.setName("exact_PR");
 
@@ -45,7 +45,7 @@ public class PRFacebookExact {
             approximatedPageRank.setConfig(config);
             approximatedPageRank.setOutputFormat(outputFormat);
 
-            String dir = localDir + "/Statistics/facebook/PR";
+            String dir = localDir + "/Statistics/PR/facebook";
             approximatedPageRank.setObserver(new ExactPRStatistics(dir, args[4]));
 
             approximatedPageRank.start();

@@ -43,17 +43,17 @@ public class HITSPolBlogsExact {
 
             ApproximatedHITS approximatedHITS = new ApproximatedHITS(streamProvider, graph);
 
-            HITSCsvOutputFormat hubOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/HITS/polblogs-exact", System.lineSeparator(), ";", false, true);
+            HITSCsvOutputFormat hubOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/HITS/PolBlogs-exact", System.lineSeparator(), ";", false, true);
             hubOutputFormat.setName("exact_hits");
             approximatedHITS.setHubOutputFormat(hubOutputFormat);
 
-            HITSCsvOutputFormat authOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/HITS/polblogs-exact", System.lineSeparator(), ";", false, true);
+            HITSCsvOutputFormat authOutputFormat = new HITSCsvOutputFormat(remoteDir + "/Results/HITS/PolBlogs-exact", System.lineSeparator(), ";", false, true);
             authOutputFormat.setName("exact_hits");
             approximatedHITS.setAuthorityOutputFormat(authOutputFormat);
 
             approximatedHITS.setConfig(config);
 
-            String dir = localDir + "/Statistics/HITS/polblogs";
+            String dir = localDir + "/Statistics/HITS/PolBlogs";
             approximatedHITS.setObserver(new ExactHITSStatistics(dir, args[4]));
 
             approximatedHITS.start();
