@@ -46,7 +46,7 @@ public class PRPolBlogsApprox {
             outputFormat.setName("approx_PR");
 
             FileStreamProvider<String> streamProvider = new FileStreamProvider<>(localDir + "/Datasets/polblogs/polblogs_cont.csv", s -> {
-                Thread.sleep(10);
+                Thread.sleep(1);
                 return s;
             });
             ApproximatedPageRank approximatedPageRank = new ApproximatedPageRank(streamProvider, graph);

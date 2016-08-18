@@ -7,7 +7,6 @@ import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.aggregation.Aggregations;
-import org.apache.flink.api.java.functions.FunctionAnnotation;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
@@ -50,7 +49,8 @@ public class SummaryGraphBuilder<VV, EV> implements Serializable {
         DataSet<Vertex<Long, Double>> kernelVertices = expandedVertexIds
                 .leftOuterJoin(previousRanks)
                 .where(keySelector).equalTo(0)
-                .with(new KernelVertexJoinFunction(initialRank));
+                .with(new KernelVertexJoinFunction(initialRank))
+                .name("Kernel vertices");
 
         Graph<Long, Double, Double> doubleGraph = originalGraph
                 .mapVertices(new MapFunction<Vertex<Long, VV>, Double>() {
@@ -74,8 +74,7 @@ public class SummaryGraphBuilder<VV, EV> implements Serializable {
                     assert degree.f1.getValue() > 0;
                     edge.setValue(1.0 / degree.f1.getValue());
                     return edge;
-                }).returns(edgeTypeInfo)
-                .withForwardedFieldsFirst("f0;f1");
+                }).returns(edgeTypeInfo);
 
         // Select all the other edges, converted to the correct type
         DataSet<Edge<Long, Double>> externalEdges = GraphUtils.externalEdges(doubleGraph, internalEdges);
@@ -85,8 +84,7 @@ public class SummaryGraphBuilder<VV, EV> implements Serializable {
                 .where(0).equalTo(0)
                 .with((rank, degree) -> degree.f1.getValue() > 0 ?
                         Tuple2.of(rank.f0, rank.f1 / degree.f1.getValue()) : Tuple2.of(rank.f0, 0.0))
-                .returns(tuple2TypeInfo)
-                .withForwardedFieldsFirst("f0");
+                .returns(tuple2TypeInfo);
 
         // For each edge, the rank sent is (rank of original vertex)/(out degree of original vertex)
         DataSet<Edge<Long, Double>> edgesToInside = externalEdges
@@ -94,7 +92,6 @@ public class SummaryGraphBuilder<VV, EV> implements Serializable {
                 .where(1).equalTo(0)
                 .with((e, v) -> e)
                 .returns(edgeTypeInfo)
-                .withForwardedFieldsFirst("*->*")
                 .join(ranksToSend)
                 .where(0).equalTo(0)
                 .with((edge, rank) -> {
@@ -102,8 +99,6 @@ public class SummaryGraphBuilder<VV, EV> implements Serializable {
                     edge.setValue(rank.f1);
                     return edge;
                 }).returns(edgeTypeInfo)
-                .withForwardedFieldsFirst("f1")
-                .withForwardedFieldsSecond("f1->f2")
                 .groupBy(0, 1)
                 .aggregate(Aggregations.SUM, 2);
 
@@ -116,7 +111,6 @@ public class SummaryGraphBuilder<VV, EV> implements Serializable {
         return Graph.fromDataSet(vertices, edges, originalGraph.getContext());
     }
 
-    @FunctionAnnotation.ForwardedFieldsFirst("*->f0")
     private static class KernelVertexJoinFunction extends RichJoinFunction<Long, Tuple2<Long, Double>, Vertex<Long, Double>> {
         final double initRank;
         private final LongCounter vertexCounter = new LongCounter();

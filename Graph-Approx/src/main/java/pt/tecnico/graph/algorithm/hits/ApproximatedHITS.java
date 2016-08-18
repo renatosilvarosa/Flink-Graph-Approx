@@ -189,7 +189,7 @@ public class ApproximatedHITS extends GraphStreamHandler<HITS.Result<Long>> {
                         }
                     }
                 }).returns(new TypeHint<HITS.Result<Long>>() {
-                }).withForwardedFieldsFirst("f0;f1");
+                });
 
         graphUpdateTracker.reset(updatedIds);
         return ranks;

@@ -33,8 +33,7 @@ public class GraphUpdateTracker<K, VV, EV> implements Serializable {
                         public Tuple2<K, UpdateInfo> join(Tuple2<K, LongValue> inDeg, Tuple2<K, LongValue> outDeg) throws Exception {
                             return Tuple2.of(inDeg.f0, new UpdateInfo(inDeg.f1.getValue(), outDeg.f1.getValue()));
                         }
-                    }).withForwardedFieldsFirst("f0")
-                    .collect();
+                    }).collect();
 
             infoMap = degrees.stream()
                     .collect(Collectors.toMap(t -> t.f0, t -> t.f1));

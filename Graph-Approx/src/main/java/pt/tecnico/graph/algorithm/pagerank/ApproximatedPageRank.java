@@ -159,6 +159,7 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
                         previousRanks, config.getNeighborhoodSize(), bigVertex);
 
         DataSet<Tuple2<Long, Double>> ranks = summaryGraph.run(new SummarizedGraphPageRank(config.getBeta(), config.getIterations(), bigVertex.getId()));
+
         ranks = previousRanks.coGroup(ranks)
                 .where(0).equalTo(0)
                 .with((Iterable<Tuple2<Long, Double>> previous, Iterable<Tuple2<Long, Double>> newRanks, Collector<Tuple2<Long, Double>> out) -> {
@@ -174,7 +175,7 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
                         out.collect(prevIt.next());
                     }
                 }).returns(new TypeHint<Tuple2<Long, Double>>() {
-                }).withForwardedFieldsFirst("f0;f1");
+                }).name("Merge with previous");
 
         graphUpdateTracker.reset(updatedIds);
         return ranks;

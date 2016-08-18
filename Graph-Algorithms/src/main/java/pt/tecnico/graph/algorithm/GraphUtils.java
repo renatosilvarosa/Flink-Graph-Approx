@@ -3,7 +3,6 @@ package pt.tecnico.graph.algorithm;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.DataSet;
-import org.apache.flink.api.java.functions.FunctionAnnotation;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
@@ -26,9 +25,9 @@ public class GraphUtils {
                     .where(keySelector).equalTo(0)
                     .with((id, e) -> e.getTarget())
                     .returns(expandedIds.getType())
-                    .withForwardedFieldsSecond("1->*");
+                    .name("Neighbours level " + level);
 
-            expandedIds = expandedIds.union(firstNeighbours).distinct();
+            expandedIds = expandedIds.union(firstNeighbours).distinct().name("Expanded level " + level);
             level--;
         }
 
@@ -41,12 +40,10 @@ public class GraphUtils {
                 .where(0).equalTo(0)
                 .with((source, edge) -> edge)
                 .returns(originalGraph.getEdges().getType())
-                .withForwardedFieldsSecond("*->*")
                 .join(vertices)
                 .where(1).equalTo(0)
                 .with((e, v) -> e)
                 .returns(originalGraph.getEdges().getType())
-                .withForwardedFieldsFirst("0;1")
                 .distinct(0, 1);
     }
 
@@ -57,12 +54,10 @@ public class GraphUtils {
                 .where(keySelector).equalTo(0)
                 .with((source, edge) -> edge)
                 .returns(originalGraph.getEdges().getType())
-                .withForwardedFieldsSecond("*->*")
                 .join(vertexIds)
                 .where(1).equalTo(keySelector)
                 .with((e, v) -> e)
                 .returns(originalGraph.getEdges().getType())
-                .withForwardedFieldsFirst("0;1")
                 .distinct(0, 1);
     }
 
@@ -96,7 +91,6 @@ public class GraphUtils {
         }
     }
 
-    @FunctionAnnotation.ForwardedFields("0;1")
     public static class EdgeToTuple2<K, EV> implements MapFunction<Edge<K, EV>, Tuple2<K, K>> {
         @Override
         public Tuple2<K, K> map(Edge<K, EV> edge) throws Exception {
