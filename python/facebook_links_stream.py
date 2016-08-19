@@ -2,10 +2,11 @@
 
 import socketserver
 import sys
+import time
 from datetime import datetime
 
 edge_path = sys.argv[1]
-links = {}
+links = dict()
 
 with open(edge_path) as edge_file:
     for l in edge_file:
@@ -25,12 +26,16 @@ class FacebookLinksStreamHandler(socketserver.BaseRequestHandler):
 
         i = 0
         for instant in range(start_date, end_date + 1):
-            for edge in links.get(instant):
-                msg = "A {0} {1}\n".format(edge[0], edge[1])
-                self.request.send(msg.encode())
+            if instant in links:
+                for edge in links[instant]:
+                    msg = "A {0} {1}\n".format(edge[0], edge[1])
+                    self.request.send(msg.encode())
+
             i += 1
-            if i % 604800 == 0:
+            if i >= 604800:
                 self.query(instant)
+                time.sleep(20)
+                i = 0
 
         self.query(end_date)
         self.request.send("END".encode())
