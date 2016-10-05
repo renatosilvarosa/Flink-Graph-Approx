@@ -18,19 +18,14 @@ import org.apache.flink.util.Collector;
 import pt.tecnico.graph.algorithm.GraphUtils;
 import pt.tecnico.graph.algorithm.SummarizedHITS;
 import pt.tecnico.graph.output.GraphOutputFormat;
-import pt.tecnico.graph.stream.GraphStreamHandler;
-import pt.tecnico.graph.stream.GraphUpdateTracker;
-import pt.tecnico.graph.stream.StreamProvider;
+import pt.tecnico.graph.stream.*;
 
 import java.util.Iterator;
 import java.util.Set;
 
-/**
- * Created by Renato on 26/06/2016.
- */
 public class ApproximatedHITS extends GraphStreamHandler<HITS.Result<Long>> {
     private ApproximatedHITSConfig config;
-    private HITSQueryObserver observer;
+    private HITSQueryObserver<Long, NullValue> observer;
     private TypeSerializerInputFormat<HITS.Result<Long>> resultInputFormat;
     private TypeSerializerOutputFormat<HITS.Result<Long>> resultOutputFormat;
     private TypeInformation<HITS.Result<Long>> resultTypeInfo;
@@ -117,19 +112,26 @@ public class ApproximatedHITS extends GraphStreamHandler<HITS.Result<Long>> {
                         resultInputFormat.setFilePath("cache/ranks" + ((iteration - 1) % 5));
                         DataSet<HITS.Result<Long>> previousResult = env.createInput(resultInputFormat, resultTypeInfo);
 
-                        DeciderResponse response = observer.onQuery(iteration, update, graph, graphUpdateTracker);
+
 
                         resultOutputFormat.setOutputFilePath(new Path("cache/ranks" + (iteration % 5)));
 
                         DataSet<HITS.Result<Long>> newResult = null;
 
-                        if (response != DeciderResponse.NO_UPDATE_AND_REPEAT_LAST_ANSWER) {
+                        GraphUpdates<Long, NullValue> graphUpdates = graphUpdateTracker.getGraphUpdates();
+                        GraphUpdateStatistics statistics = graphUpdateTracker.getUpdateStatistics();
+                        boolean result = observer.beforeUpdates(graphUpdates, statistics);
+
+                        if (result) {
                             applyUpdates();
+                            graphUpdateTracker.resetUpdates();
                         }
 
+                        ObserverResponse response = observer.onQuery(iteration, update, graph, graphUpdates, statistics,
+                                graphUpdateTracker.getUpdateInfos(), config);
+
                         switch (response) {
-                            case NO_UPDATE_AND_REPEAT_LAST_ANSWER:
-                            case UPDATE_AND_REPEAT_LAST_ANSWER:
+                            case REPEAT_LAST_ANSWER:
                                 newResult = previousResult;
                                 computedVertices = null;
                                 break;
@@ -165,7 +167,7 @@ public class ApproximatedHITS extends GraphStreamHandler<HITS.Result<Long>> {
     }
 
     private DataSet<HITS.Result<Long>> computeApproximate(DataSet<HITS.Result<Long>> previousResults) throws Exception {
-        Set<Long> updatedIds = graphUpdateTracker.updatedAboveThresholdVertexIds(config.getUpdatedRatioThreshold(), EdgeDirection.ALL);
+        Set<Long> updatedIds = pt.tecnico.graph.GraphUtils.updatedAboveThresholdIds(graphUpdateTracker.getUpdateInfos(), config.getUpdatedRatioThreshold(), EdgeDirection.ALL);
         computedVertices = GraphUtils.expandedVertexIds(graph, env.fromCollection(updatedIds, TypeInformation.of(Long.class)), config.getNeighborhoodSize());
 
         SummarizedHITS<Long, NullValue, NullValue> summarizedHITS = new SummarizedHITS<Long, NullValue, NullValue>(30)
@@ -217,12 +219,4 @@ public class ApproximatedHITS extends GraphStreamHandler<HITS.Result<Long>> {
         this.observer = observer;
         return this;
     }
-
-    public enum DeciderResponse {
-        NO_UPDATE_AND_REPEAT_LAST_ANSWER,
-        UPDATE_AND_REPEAT_LAST_ANSWER,
-        COMPUTE_APPROXIMATE,
-        COMPUTE_EXACT
-    }
-
 }

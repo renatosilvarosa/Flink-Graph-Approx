@@ -19,9 +19,6 @@ import pt.tecnico.graph.algorithm.GraphUtils;
 
 import java.io.Serializable;
 
-/**
- * Created by Renato on 05/07/2016.
- */
 public class SummaryGraphBuilder<VV, EV> implements Serializable {
 
     private static final VertexKeySelector<Long> keySelector = new VertexKeySelector<>(TypeInformation.of(Long.class));
@@ -37,16 +34,13 @@ public class SummaryGraphBuilder<VV, EV> implements Serializable {
         this.initialRank = initialRank;
     }
 
-    public Graph<Long, Double, Double> representativeGraph(DataSet<Long> updatedVertices, DataSet<Tuple2<Long, Double>> previousRanks,
-                                                           int level, Vertex<Long, Double> bigVertex) throws Exception {
+    public Graph<Long, Double, Double> summaryGraph(DataSet<Long> vertexIds, DataSet<Tuple2<Long, Double>> previousRanks,
+                                                    Vertex<Long, Double> bigVertex) throws Exception {
 
         DataSet<Tuple2<Long, LongValue>> outDegrees = originalGraph.outDegrees();
 
-        // Expand the selected vertices to neighborhood given by level
-        DataSet<Long> expandedVertexIds = GraphUtils.expandedVertexIds(originalGraph, updatedVertices, level);
-
-        // Generate vertices with previous rank, or initialRank (for new vertices), as values
-        DataSet<Vertex<Long, Double>> kernelVertices = expandedVertexIds
+        // Generate vertexIds with previous rank, or initialRank (for new vertexIds), as values
+        DataSet<Vertex<Long, Double>> kernelVertices = vertexIds
                 .leftOuterJoin(previousRanks)
                 .where(keySelector).equalTo(0)
                 .with(new KernelVertexJoinFunction(initialRank))
@@ -66,12 +60,12 @@ public class SummaryGraphBuilder<VV, EV> implements Serializable {
                     }
                 });
 
-        // Select the edges between the kernel vertices, with 1/(degree of source) as the value
+        // Select the edges between the kernel vertexIds, with 1/(degree of source) as the value
         DataSet<Edge<Long, Double>> internalEdges = GraphUtils.selectEdges(doubleGraph, kernelVertices)
                 .join(outDegrees)
                 .where(0).equalTo(0)
                 .with((edge, degree) -> {
-                    assert degree.f1.getValue() > 0;
+                    assert degree.f1.getValue() > 0; //since there is an edge, out degree of edge source must be at least 1
                     edge.setValue(1.0 / degree.f1.getValue());
                     return edge;
                 }).returns(edgeTypeInfo);

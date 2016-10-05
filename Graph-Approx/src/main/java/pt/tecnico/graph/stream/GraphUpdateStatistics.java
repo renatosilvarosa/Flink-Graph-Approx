@@ -1,52 +1,43 @@
 package pt.tecnico.graph.stream;
 
-/**
- * Created by Renato on 12/07/2016.
- */
-public class GraphUpdateStatistics {
-    private long addedVertices;
-    private long removedVertices;
-    private long addedEdges;
-    private long removedEdges;
-    private long updatedVertices;
-    private long totalVertices;
-    private long totalEdges;
+import org.apache.flink.api.java.tuple.Tuple7;
 
-    GraphUpdateStatistics(long addedVertices, long removedVertices, long addedEdges, long removedEdges, long updatedVertices, long totalVertices, long totalEdges) {
-        this.addedVertices = addedVertices;
-        this.removedVertices = removedVertices;
-        this.addedEdges = addedEdges;
-        this.removedEdges = removedEdges;
-        this.updatedVertices = updatedVertices;
-        this.totalVertices = totalVertices;
-        this.totalEdges = totalEdges;
+public class GraphUpdateStatistics extends Tuple7<Long, Long, Long, Long, Long, Long, Long> {
+    public GraphUpdateStatistics(long addedVertices, long removedVertices, long addedEdges, long removedEdges, long updatedVertices, long totalVertices, long totalEdges) {
+        this.f0 = addedVertices;
+        this.f1 = removedVertices;
+        this.f2 = addedEdges;
+        this.f3 = removedEdges;
+        this.f4 = updatedVertices;
+        this.f5 = totalVertices;
+        this.f6 = totalEdges;
     }
 
     public long getAddedVertices() {
-        return addedVertices;
+        return f0;
     }
 
     public long getRemovedVertices() {
-        return removedVertices;
+        return f1;
     }
 
     public long getAddedEdges() {
-        return addedEdges;
+        return f2;
     }
 
     public long getRemovedEdges() {
-        return removedEdges;
+        return f3;
     }
 
     public long getUpdatedVertices() {
-        return updatedVertices;
+        return f4;
     }
 
     public long getTotalVertices() {
-        return totalVertices;
+        return f5;
     }
 
     public long getTotalEdges() {
-        return totalEdges;
+        return f6;
     }
 }

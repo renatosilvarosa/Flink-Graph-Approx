@@ -1,5 +1,6 @@
 package test.hits;
 
+import org.apache.flink.types.NullValue;
 import pt.tecnico.graph.algorithm.hits.HITSQueryObserver;
 
 import java.io.PrintStream;
@@ -7,10 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-/**
- * Created by Renato on 27/07/2016.
- */
-public abstract class HITSStatistics implements HITSQueryObserver {
+public abstract class HITSStatistics implements HITSQueryObserver<Long, NullValue> {
     protected final String dir;
     protected final String fileName;
     protected PrintStream printStream;

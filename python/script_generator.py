@@ -1,6 +1,6 @@
 #! /usr/bin/python3
 
-dataset = "PolBlogs"
+dataset = "Facebook"
 algorithm = "PR"
 
 package = "test." + algorithm.lower() + "." + dataset.lower() + "."
@@ -9,12 +9,12 @@ approx_class = package + algorithm + dataset + "Approx"
 local_dir = "/home/rrosa"
 remote_dir = "/home/rrosa"
 python_dir = remote_dir + "/Flink-Graph-Approx/python"
-iterations = 30
+iterations = 20
 base_threshold = 0.0
-top_threshold = 0.25
-step_threshold = 0.05
+top_threshold = 0.2
+step_threshold = 0.1
 base_neigh = 0
-top_neigh = 3
+top_neigh = 2
 output_size = 1000
 
 print("#!/bin/bash")

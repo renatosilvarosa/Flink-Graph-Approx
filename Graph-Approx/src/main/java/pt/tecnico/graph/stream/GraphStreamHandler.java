@@ -17,9 +17,6 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.stream.Collectors;
 
-/**
- * Created by Renato on 25/05/2016.
- */
 public abstract class GraphStreamHandler<R> implements Runnable {
     protected final BlockingQueue<String> pendingUpdates;
     protected final ExecutionEnvironment env;
@@ -54,9 +51,10 @@ public abstract class GraphStreamHandler<R> implements Runnable {
     protected void applyUpdates() throws Exception {
         edgeInputFormat.setFilePath("cache/edges" + ((iteration - 1) % 5));
         graph = Graph.fromTuple2DataSet(env.createInput(edgeInputFormat), env);
+        GraphUpdates<Long, NullValue> updates = graphUpdateTracker.getGraphUpdates();
 
-        if (!graphUpdateTracker.getVerticesToAdd().isEmpty()) {
-            List<Vertex<Long, NullValue>> vertices = graphUpdateTracker.getVerticesToAdd().stream()
+        if (!updates.verticesToAdd.isEmpty()) {
+            List<Vertex<Long, NullValue>> vertices = updates.verticesToAdd.stream()
                     .map(id -> new Vertex<>(id, NullValue.getInstance()))
                     .distinct()
                     .collect(Collectors.toList());
@@ -64,26 +62,25 @@ public abstract class GraphStreamHandler<R> implements Runnable {
             graph = graph.addVertices(vertices);
         }
 
-        if (!graphUpdateTracker.getEdgesToAdd().isEmpty()) {
-            graph = graph.addEdges(new ArrayList<>(graphUpdateTracker.getEdgesToAdd()));
+        if (!updates.edgesToAdd.isEmpty()) {
+            graph = graph.addEdges(new ArrayList<>(updates.edgesToAdd));
         }
 
-        if (!graphUpdateTracker.getVerticesToRemove().isEmpty()) {
-            graph = graph.removeVertices(graphUpdateTracker.getVerticesToRemove().stream()
+        if (!updates.verticesToRemove.isEmpty()) {
+            graph = graph.removeVertices(updates.verticesToRemove.stream()
                     .map(id -> new Vertex<>(id, NullValue.getInstance()))
                     .distinct()
                     .collect(Collectors.toList()));
         }
 
-        if (!graphUpdateTracker.getEdgesToRemove().isEmpty()) {
-            graph = graph.removeEdges(new ArrayList<>(graphUpdateTracker.getEdgesToRemove()));
+        if (!updates.edgesToRemove.isEmpty()) {
+            graph = graph.removeEdges(new ArrayList<>(updates.edgesToRemove));
         }
 
         edgeOutputFormat.setOutputFilePath(new Path("cache/edges" + (iteration % 5)));
         graph.getEdgeIds().output(edgeOutputFormat);
 
         env.execute("Apply updates it. " + iteration);
-        graphUpdateTracker.resetUpdates();
     }
 
     protected void registerEdgeDelete(String[] split) {
@@ -99,5 +96,11 @@ public abstract class GraphStreamHandler<R> implements Runnable {
     private Edge<Long, NullValue> parseEdge(String[] data) {
         assert data.length == 3;
         return new Edge<>(Long.valueOf(data[1]), Long.valueOf(data[2]), NullValue.getInstance());
+    }
+
+    public enum ObserverResponse {
+        REPEAT_LAST_ANSWER,
+        COMPUTE_APPROXIMATE,
+        COMPUTE_EXACT
     }
 }

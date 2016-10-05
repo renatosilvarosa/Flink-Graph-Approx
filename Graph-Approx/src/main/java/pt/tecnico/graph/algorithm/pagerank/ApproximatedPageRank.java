@@ -14,22 +14,18 @@ import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.Vertex;
 import org.apache.flink.types.NullValue;
 import org.apache.flink.util.Collector;
+import pt.tecnico.graph.algorithm.GraphUtils;
 import pt.tecnico.graph.algorithm.SimplePageRank;
 import pt.tecnico.graph.algorithm.SummarizedGraphPageRank;
-import pt.tecnico.graph.stream.GraphStreamHandler;
-import pt.tecnico.graph.stream.GraphUpdateTracker;
-import pt.tecnico.graph.stream.StreamProvider;
+import pt.tecnico.graph.stream.*;
 
 import java.util.Iterator;
 import java.util.Set;
 
-/**
- * Created by Renato on 26/06/2016.
- */
 public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double>> {
     private ApproximatedPageRankConfig config;
 
-    private PageRankQueryObserver observer;
+    private PageRankQueryObserver<Long, NullValue> observer;
     private TypeSerializerInputFormat<Tuple2<Long, Double>> rankInputFormat;
     private TypeSerializerOutputFormat<Tuple2<Long, Double>> rankOutputFormat;
     private TypeInformation<Tuple2<Long, Double>> rankTypeInfo;
@@ -100,22 +96,27 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
 
                         String tag = split.length > 1 ? split[1] : "";
 
+                        GraphUpdates<Long, NullValue> graphUpdates = graphUpdateTracker.getGraphUpdates();
+                        GraphUpdateStatistics statistics = graphUpdateTracker.getUpdateStatistics();
+                        boolean result = observer.beforeUpdates(graphUpdates, statistics);
+
+                        if (result) {
+                            applyUpdates();
+                            graphUpdateTracker.resetUpdates();
+                        }
+
                         rankInputFormat.setFilePath("cache/ranks" + ((iteration - 1) % 5));
                         DataSet<Tuple2<Long, Double>> previousRanks = env.createInput(rankInputFormat, rankTypeInfo);
 
-                        DeciderResponse response = observer.onQuery(iteration, update, graph, graphUpdateTracker);
+                        ObserverResponse response = observer.onQuery(iteration, update, graph, graphUpdates, statistics,
+                                graphUpdateTracker.getUpdateInfos(), config);
 
                         rankOutputFormat.setOutputFilePath(new Path("cache/ranks" + (iteration % 5)));
 
                         DataSet<Tuple2<Long, Double>> newRanks = null;
 
-                        if (response != DeciderResponse.NO_UPDATE_AND_REPEAT_LAST_ANSWER) {
-                            applyUpdates();
-                        }
-
                         switch (response) {
-                            case NO_UPDATE_AND_REPEAT_LAST_ANSWER:
-                            case UPDATE_AND_REPEAT_LAST_ANSWER:
+                            case REPEAT_LAST_ANSWER:
                                 newRanks = previousRanks;
                                 summaryGraph = null;
                                 break;
@@ -134,7 +135,6 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
 
                         env.execute("Approx PageRank it. " + iteration);
                         observer.onQueryResult(iteration, update, response, graph, summaryGraph, newRanks, env.getLastJobExecutionResult());
-
                         break;
                     case "END":
                         observer.onStop();
@@ -147,16 +147,24 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
     }
 
     private DataSet<Tuple2<Long, Double>> computeExact() throws Exception {
-        return graph.run(new SimplePageRank<>(config.getBeta(), 1.0, config.getIterations()));
+
+        DataSet<Tuple2<Long, Double>> result =
+                graph.run(new SimplePageRank<>(config.getBeta(), 1.0, config.getIterations()));
+        graphUpdateTracker.resetAll();
+        return result;
     }
 
     private DataSet<Tuple2<Long, Double>> computeApproximate(DataSet<Tuple2<Long, Double>> previousRanks) throws Exception {
-        Set<Long> updatedIds = graphUpdateTracker.updatedAboveThresholdVertexIds(config.getUpdatedRatioThreshold(), EdgeDirection.ALL);
+        Set<Long> updatedIds = pt.tecnico.graph.GraphUtils.updatedAboveThresholdIds(graphUpdateTracker.getUpdateInfos(),
+                config.getUpdatedRatioThreshold(), EdgeDirection.IN);
+
+        DataSet<Long> vertices = env.fromCollection(updatedIds, TypeInformation.of(Long.class));
+
+        // Expand the selected vertices to neighborhood given by level
+        DataSet<Long> expandedVertices = GraphUtils.expandedVertexIds(graph, vertices, config.getNeighborhoodSize());
 
         Vertex<Long, Double> bigVertex = new Vertex<>(0L, 0.0);
-        summaryGraph = new SummaryGraphBuilder<>(graph, 1.0)
-                .representativeGraph(env.fromCollection(updatedIds, TypeInformation.of(Long.class)),
-                        previousRanks, config.getNeighborhoodSize(), bigVertex);
+        summaryGraph = new SummaryGraphBuilder<>(graph, 1.0).summaryGraph(expandedVertices, previousRanks, bigVertex);
 
         DataSet<Tuple2<Long, Double>> ranks = summaryGraph.run(new SummarizedGraphPageRank(config.getBeta(), config.getIterations(), bigVertex.getId()));
 
@@ -177,7 +185,7 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
                 }).returns(new TypeHint<Tuple2<Long, Double>>() {
                 }).name("Merge with previous");
 
-        graphUpdateTracker.reset(updatedIds);
+        graphUpdateTracker.reset(expandedVertices.collect());
         return ranks;
     }
 
@@ -195,16 +203,8 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
         this.config = config;
     }
 
-    public ApproximatedPageRank setObserver(PageRankQueryObserver observer) {
+    public ApproximatedPageRank setObserver(PageRankQueryObserver<Long, NullValue> observer) {
         this.observer = observer;
         return this;
     }
-
-    public enum DeciderResponse {
-        NO_UPDATE_AND_REPEAT_LAST_ANSWER,
-        UPDATE_AND_REPEAT_LAST_ANSWER,
-        COMPUTE_APPROXIMATE,
-        COMPUTE_EXACT
-    }
-
 }

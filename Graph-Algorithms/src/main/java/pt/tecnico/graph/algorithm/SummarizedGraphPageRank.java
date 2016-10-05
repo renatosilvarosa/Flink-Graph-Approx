@@ -38,7 +38,7 @@ public class SummarizedGraphPageRank implements GraphAlgorithm<Long, Double, Dou
         public void updateVertex(Vertex<Long, Double> vertex, MessageIterator<Double> inMessages) throws Exception {
             if (vertex.getId().equals(bigVertexId)) {
                 // do not change the rank of the big vertex
-                setNewVertexValue(vertex.getValue());
+                setNewVertexValue(vertex.getValue()); //necessary to assure messages are sent next
                 return;
             }
 

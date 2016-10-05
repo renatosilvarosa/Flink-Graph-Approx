@@ -1,5 +1,6 @@
 package test.pr;
 
+import org.apache.flink.types.NullValue;
 import pt.tecnico.graph.algorithm.pagerank.PageRankQueryObserver;
 
 import java.io.PrintStream;
@@ -10,7 +11,7 @@ import java.nio.file.Paths;
 /**
  * Created by Renato on 27/07/2016.
  */
-public abstract class PRStatistics implements PageRankQueryObserver {
+public abstract class PRStatistics implements PageRankQueryObserver<Long, NullValue> {
     private final String dir;
     private final String fileName;
     protected PrintStream printStream;

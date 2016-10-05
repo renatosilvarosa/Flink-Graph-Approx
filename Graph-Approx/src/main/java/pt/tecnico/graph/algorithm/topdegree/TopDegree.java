@@ -12,6 +12,7 @@ import org.apache.flink.graph.EdgeDirection;
 import org.apache.flink.graph.Graph;
 import org.apache.flink.types.LongValue;
 import org.apache.flink.types.NullValue;
+import pt.tecnico.graph.GraphUtils;
 import pt.tecnico.graph.stream.GraphStreamHandler;
 import pt.tecnico.graph.stream.GraphUpdateTracker;
 import pt.tecnico.graph.stream.StreamProvider;
@@ -59,7 +60,7 @@ public class TopDegree extends GraphStreamHandler<Tuple2<Long, LongValue>> {
                         String date = split[1];
                         double th = Double.parseDouble(split[2]);
 
-                        updated = graphUpdateTracker.allUpdatedVertexIds(edgeDirection);
+                        updated = GraphUtils.allUpdatedIds(graphUpdateTracker.getUpdateInfos(), edgeDirection);
                         topVertices = queryTop(th);
 
                         csvName = "./top_" + date + "_" + th + ".csv";
@@ -89,7 +90,7 @@ public class TopDegree extends GraphStreamHandler<Tuple2<Long, LongValue>> {
                 .with((degree, id) -> degree)
                 .returns(graph.inDegrees().getType());
 
-        Double number = graphUpdateTracker.numberOfVertices() * th + 1;
+        Double number = graphUpdateTracker.getUpdateStatistics().getTotalVertices() * th + 1;
 
         return env.readCsvFile(csvName).types(Long.class, LongValue.class)
                 .union(updatedVertices)

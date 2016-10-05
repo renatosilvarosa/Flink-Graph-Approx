@@ -1,6 +1,5 @@
 package pt.tecnico.graph.algorithm;
 
-import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -22,13 +21,7 @@ public class AverageDegree<K, VV, EV> implements GraphAlgorithm<K, VV, EV, DataS
                 .returns(tuple2TypeHint)
                 .reduce((t1, t2) -> Tuple2.of(t1.f0 + t2.f0, t1.f1 + t2.f1))
                 .returns(tuple2TypeHint)
-                .flatMap(new FlatMapFunction<Tuple2<Long, Integer>, Double>() {
-                    @Override
-                    public void flatMap(Tuple2<Long, Integer> v, Collector<Double> out) throws Exception {
-                        out.collect(v.f0.doubleValue() / v.f1.doubleValue());
-                    }
-                });
-
-
+                .flatMap((Tuple2<Long, Integer> v, Collector<Double> out) ->
+                        out.collect(v.f0.doubleValue() / v.f1.doubleValue()));
     }
 }

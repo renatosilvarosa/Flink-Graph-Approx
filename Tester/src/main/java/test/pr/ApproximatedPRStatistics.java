@@ -5,12 +5,14 @@ import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.graph.Graph;
 import org.apache.flink.types.NullValue;
-import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRank;
+import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRankConfig;
+import pt.tecnico.graph.stream.GraphStreamHandler;
+import pt.tecnico.graph.stream.GraphUpdateStatistics;
 import pt.tecnico.graph.stream.GraphUpdateTracker;
+import pt.tecnico.graph.stream.GraphUpdates;
 
-/**
- * Created by Renato on 26/07/2016.
- */
+import java.util.Map;
+
 public class ApproximatedPRStatistics extends PRStatistics {
 
     public ApproximatedPRStatistics(String dir, String fileName) {
@@ -24,12 +26,20 @@ public class ApproximatedPRStatistics extends PRStatistics {
     }
 
     @Override
-    public ApproximatedPageRank.DeciderResponse onQuery(int id, String query, Graph<Long, NullValue, NullValue> graph, GraphUpdateTracker<Long, NullValue, NullValue> updateTracker) {
-        return ApproximatedPageRank.DeciderResponse.COMPUTE_APPROXIMATE;
+    public boolean beforeUpdates(GraphUpdates<Long, NullValue> updates, GraphUpdateStatistics statistics) {
+        return true;
     }
 
     @Override
-    public void onQueryResult(int id, String query, ApproximatedPageRank.DeciderResponse response, Graph<Long,
+    public GraphStreamHandler.ObserverResponse onQuery(int id, String query, Graph<Long, NullValue, NullValue> graph,
+                                                       GraphUpdates<Long, NullValue> updates, GraphUpdateStatistics statistics,
+                                                       Map<Long, GraphUpdateTracker.UpdateInfo> updateInfos,
+                                                       ApproximatedPageRankConfig config) {
+        return GraphStreamHandler.ObserverResponse.COMPUTE_APPROXIMATE;
+    }
+
+    @Override
+    public void onQueryResult(int id, String query, GraphStreamHandler.ObserverResponse response, Graph<Long,
             NullValue, NullValue> graph, Graph<Long, Double, Double> summaryGraph, DataSet<Tuple2<Long, Double>> result,
                               JobExecutionResult jobExecutionResult) {
         try {

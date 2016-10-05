@@ -249,11 +249,11 @@ public class SummarizedHITS<K, VV, EV>
                 .coGroup(edges)
                 .where(0)
                 .equalTo(0)
-                .with(new Authority<K>())
+                .with(new Authority<>())
                 .setParallelism(parallelism)
                 .name("Authority")
                 .groupBy(0)
-                .reduce(new SumScore<K>())
+                .reduce(new SumScore<>())
                 .setCombineHint(ReduceOperatorBase.CombineHint.HASH)
                 .setParallelism(parallelism)
                 .name("Sum")
@@ -287,6 +287,13 @@ public class SummarizedHITS<K, VV, EV>
                 .withBroadcastSet(authoritySumSquared, AUTHORITY_SUM_SQUARED)
                 .setParallelism(parallelism)
                 .name("Join scores");
+
+        sumToInside = sumToInside.map(new NormalizeMapFunction<>())
+                .withBroadcastSet(hubbinessSumSquared, HUBBINESS_SUM_SQUARED)
+                .withBroadcastSet(authoritySumSquared, AUTHORITY_SUM_SQUARED);
+        sumToOutside = sumToOutside.map(new NormalizeMapFunction<>())
+                .withBroadcastSet(hubbinessSumSquared, HUBBINESS_SUM_SQUARED)
+                .withBroadcastSet(authoritySumSquared, AUTHORITY_SUM_SQUARED);
 
         DataSet<Tuple3<K, DoubleValue, DoubleValue>> passThrough;
 
@@ -424,7 +431,6 @@ public class SummarizedHITS<K, VV, EV>
         private Tuple3<T, DoubleValue, DoubleValue> output = new Tuple3<>(null, new DoubleValue(), new DoubleValue());
 
         private double hubbinessRootSumSquared;
-
         private double authorityRootSumSquared;
 
         @Override
@@ -448,6 +454,34 @@ public class SummarizedHITS<K, VV, EV>
             output.f1.setValue(hubbiness == null ? 0.0 : hubbiness.f1.getValue() / hubbinessRootSumSquared);
             output.f2.setValue(authority == null ? 0.0 : authority.f1.getValue() / authorityRootSumSquared);
             return output;
+        }
+    }
+
+    private static class NormalizeMapFunction<K> extends RichMapFunction<Result<K>, Result<K>> {
+        private double hubbinessRootSumSquared;
+        private double authorityRootSumSquared;
+
+        @Override
+        public void open(Configuration parameters) throws Exception {
+            super.open(parameters);
+
+            Collection<DoubleValue> var;
+            var = getRuntimeContext().getBroadcastVariable(HUBBINESS_SUM_SQUARED);
+            Iterator<DoubleValue> iterator = var.iterator();
+            hubbinessRootSumSquared = iterator.hasNext() ? Math.sqrt(iterator.next().getValue()) : 1.0;
+
+            var = getRuntimeContext().getBroadcastVariable(AUTHORITY_SUM_SQUARED);
+            iterator = var.iterator();
+            authorityRootSumSquared = iterator.hasNext() ? Math.sqrt(iterator.next().getValue()) : 1.0;
+        }
+
+        @Override
+        public Result<K> map(Result<K> prev) throws Exception {
+            double auth = prev.getAuthorityScore().getValue() / authorityRootSumSquared;
+            double hub = prev.getHubScore().getValue() / hubbinessRootSumSquared;
+            prev.getAuthorityScore().setValue(auth);
+            prev.getHubScore().setValue(hub);
+            return prev;
         }
     }
 

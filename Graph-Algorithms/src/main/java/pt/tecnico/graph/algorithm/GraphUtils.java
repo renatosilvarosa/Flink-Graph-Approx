@@ -11,9 +11,6 @@ import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.Vertex;
 import org.apache.flink.util.Collector;
 
-/**
- * Created by Renato on 08/08/2016.
- */
 public class GraphUtils {
 
     public static <K, VV, EV> DataSet<K> expandedVertexIds(Graph<K, VV, EV> originalGraph, DataSet<K> originalVertexIds, int level) throws Exception {
