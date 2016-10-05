@@ -43,7 +43,7 @@ class CitationStreamHandler(socketserver.BaseRequestHandler):
             if i % 61 == 0:
                 self.query(day)
 
-            time.sleep(0.001)
+            time.sleep(0.01)
 
         self.query(end_date)
         self.request.send("END".encode())
