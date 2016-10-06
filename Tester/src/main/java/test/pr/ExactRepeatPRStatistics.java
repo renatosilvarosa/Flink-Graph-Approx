@@ -22,7 +22,7 @@ public class ExactRepeatPRStatistics extends PRStatistics {
     @Override
     public void onStart() throws Exception {
         super.onStart();
-        printStream.println("iteration;nVertices;nEdges;nSummVertices;nSummEdges;time");
+        printStream.println("iteration;nVertices;nEdges;time");
     }
 
     @Override
@@ -48,10 +48,8 @@ public class ExactRepeatPRStatistics extends PRStatistics {
         try {
             long nVertices = graph.numberOfVertices();
             long nEdges = graph.numberOfEdges();
-            long summVertices = summaryGraph.numberOfVertices();
-            long summEdges = summaryGraph.numberOfEdges();
 
-            printStream.format("%d;%d;%d;%d;%d;%d%n", id, nVertices, nEdges, summVertices, summEdges, jobExecutionResult.getNetRuntime());
+            printStream.format("%d;%d;%d;%d%n", id, nVertices, nEdges, jobExecutionResult.getNetRuntime());
             printStream.flush();
 
         } catch (Exception e) {
