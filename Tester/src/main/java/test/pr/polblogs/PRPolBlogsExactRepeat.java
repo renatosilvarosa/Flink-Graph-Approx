@@ -7,7 +7,7 @@ import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRank;
 import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRankConfig;
 import pt.tecnico.graph.algorithm.pagerank.PageRankCsvOutputFormat;
 import pt.tecnico.graph.stream.FileStreamProvider;
-import test.pr.ExactPRStatistics;
+import test.pr.ExactRepeatPRStatistics;
 
 /**
  * Created by Renato on 09/04/2016.
@@ -50,7 +50,7 @@ public class PRPolBlogsExactRepeat {
             approximatedPageRank.setOutputFormat(outputFormat);
 
             String dir = localDir + "/Statistics/PR/PolBlogs";
-            approximatedPageRank.setObserver(new ExactPRStatistics(dir, args[4]));
+            approximatedPageRank.setObserver(new ExactRepeatPRStatistics(dir, args[4]));
 
             approximatedPageRank.start();
 
