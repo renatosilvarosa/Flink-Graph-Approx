@@ -277,6 +277,13 @@ public class SummarizedHITS<K, VV, EV>
                 .setParallelism(parallelism)
                 .name("Sum");
 
+        sumToInside = sumToInside.map(new NormalizeMapFunction<>())
+                .withBroadcastSet(hubbinessSumSquared, HUBBINESS_SUM_SQUARED)
+                .withBroadcastSet(authoritySumSquared, AUTHORITY_SUM_SQUARED);
+        sumToOutside = sumToOutside.map(new NormalizeMapFunction<>())
+                .withBroadcastSet(hubbinessSumSquared, HUBBINESS_SUM_SQUARED)
+                .withBroadcastSet(authoritySumSquared, AUTHORITY_SUM_SQUARED);
+
         // ID, normalized hubbiness, normalized authority
         DataSet<Tuple3<K, DoubleValue, DoubleValue>> scores = hubbiness
                 .fullOuterJoin(authority, JoinOperatorBase.JoinHint.REPARTITION_SORT_MERGE)
@@ -287,13 +294,6 @@ public class SummarizedHITS<K, VV, EV>
                 .withBroadcastSet(authoritySumSquared, AUTHORITY_SUM_SQUARED)
                 .setParallelism(parallelism)
                 .name("Join scores");
-
-        sumToInside = sumToInside.map(new NormalizeMapFunction<>())
-                .withBroadcastSet(hubbinessSumSquared, HUBBINESS_SUM_SQUARED)
-                .withBroadcastSet(authoritySumSquared, AUTHORITY_SUM_SQUARED);
-        sumToOutside = sumToOutside.map(new NormalizeMapFunction<>())
-                .withBroadcastSet(hubbinessSumSquared, HUBBINESS_SUM_SQUARED)
-                .withBroadcastSet(authoritySumSquared, AUTHORITY_SUM_SQUARED);
 
         DataSet<Tuple3<K, DoubleValue, DoubleValue>> passThrough;
 
