@@ -1,17 +1,61 @@
 package pt.tecnico.graph.algorithm;
 
 import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.DataSet;
+import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
+import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.graph.Edge;
 import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.Vertex;
+import org.apache.flink.types.NullValue;
 import org.apache.flink.util.Collector;
+import org.objenesis.Objenesis;
+import org.objenesis.ObjenesisStd;
+
+import java.util.Collections;
 
 public class GraphUtils {
+
+    static <T> DataSet<T> emptyDataSet(ExecutionEnvironment env, TypeInformation<T> typeInformation) {
+        return env.fromCollection(Collections.emptyList(), typeInformation);
+    }
+
+    static <T> DataSet<T> emptyDataSet(ExecutionEnvironment env, TypeHint<T> typeHint) {
+        return env.fromCollection(Collections.emptyList(), typeHint.getTypeInfo());
+    }
+
+    static <T> DataSet<T> emptyDataSet(ExecutionEnvironment env, Class<T> clazz) {
+        return env.fromCollection(Collections.emptyList(), TypeInformation.of(clazz));
+    }
+
+    static <K, VV, EV> Graph<K, VV, EV> emptyGraph(ExecutionEnvironment env, Class<K> keyType,
+                                                   Class<VV> vertexType, Class<EV> edgeType) {
+        Objenesis instantiator = new ObjenesisStd(true);
+        K k = instantiator.newInstance(keyType);
+        VV vv = instantiator.newInstance(vertexType);
+        EV ev = instantiator.newInstance(edgeType);
+
+        TypeInformation<Vertex<K, VV>> vertexInfo = TypeExtractor.getForObject(new Vertex<>(k, vv));
+        TypeInformation<Edge<K, EV>> edgeInfo = TypeExtractor.getForObject(new Edge<>(k, k, ev));
+
+        return Graph.fromDataSet(emptyDataSet(env, vertexInfo), emptyDataSet(env, edgeInfo), env);
+
+    }
+
+    static <K> Graph<K, NullValue, NullValue> emptyGraph(ExecutionEnvironment env, Class<K> keyType) {
+        Objenesis instantiator = new ObjenesisStd(true);
+        K k = instantiator.newInstance(keyType);
+
+        TypeInformation<Vertex<K, NullValue>> vertexInfo = TypeExtractor.getForObject(new Vertex<>(k, NullValue.getInstance()));
+        TypeInformation<Edge<K, NullValue>> edgeInfo = TypeExtractor.getForObject(new Edge<>(k, k, NullValue.getInstance()));
+
+        return Graph.fromDataSet(emptyDataSet(env, vertexInfo), emptyDataSet(env, edgeInfo), env);
+    }
 
     public static <K, VV, EV> DataSet<K> expandedVertexIds(Graph<K, VV, EV> originalGraph, DataSet<K> originalVertexIds, int level) throws Exception {
         DataSet<K> expandedIds = originalVertexIds;
@@ -70,7 +114,7 @@ public class GraphUtils {
                 }).returns(originalGraph.getEdges().getType());
     }
 
-    public static class VertexKeySelector<K> implements KeySelector<K, K>, ResultTypeQueryable<K> {
+    private static class VertexKeySelector<K> implements KeySelector<K, K>, ResultTypeQueryable<K> {
         final TypeInformation<K> type;
 
         public VertexKeySelector(TypeInformation<K> type) {

@@ -155,7 +155,7 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
     }
 
     private DataSet<Tuple2<Long, Double>> computeApproximate(DataSet<Tuple2<Long, Double>> previousRanks) throws Exception {
-        Set<Long> updatedIds = pt.tecnico.graph.GraphUtils.updatedAboveThresholdIds(graphUpdateTracker.getUpdateInfos(),
+        Set<Long> updatedIds = GraphUpdateTracker.updatedAboveThresholdIds(graphUpdateTracker.getUpdateInfos(),
                 config.getUpdatedRatioThreshold(), EdgeDirection.IN);
 
         DataSet<Long> vertices = env.fromCollection(updatedIds, TypeInformation.of(Long.class));
