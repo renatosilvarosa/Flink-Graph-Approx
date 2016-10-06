@@ -29,7 +29,7 @@ public class PRPolBlogsApprox {
                 .disableSysoutLogging()
                 .setParallelism(1);
         try {
-            Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader(remoteDir + "/Datasets/polblogs/polblogs_init.csv", env)
+            Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader(remoteDir + "/Datasets/PolBlogs/polblogs_init.csv", env)
                     .ignoreCommentsEdges("#")
                     .fieldDelimiterEdges(";")
                     .keyType(Long.class);
@@ -45,7 +45,7 @@ public class PRPolBlogsApprox {
             PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat(outputDir, System.lineSeparator(), ";", false, true);
             outputFormat.setName("approx_PR");
 
-            FileStreamProvider<String> streamProvider = new FileStreamProvider<>(localDir + "/Datasets/polblogs/polblogs_cont.csv", s -> {
+            FileStreamProvider<String> streamProvider = new FileStreamProvider<>(localDir + "/Datasets/PolBlogs/polblogs_cont.csv", s -> {
                 Thread.sleep(1);
                 return s;
             });
@@ -53,7 +53,7 @@ public class PRPolBlogsApprox {
             approximatedPageRank.setConfig(config);
             approximatedPageRank.setOutputFormat(outputFormat);
 
-            String dir = localDir + "/Statistics/PR/polblogs";
+            String dir = localDir + "/Statistics/PR/PolBlogs";
             approximatedPageRank.setObserver(new ApproximatedPRStatistics(dir, args[6]));
 
             approximatedPageRank.start();

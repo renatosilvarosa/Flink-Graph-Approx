@@ -27,7 +27,7 @@ public class PRPolBlogsExact {
                 .disableSysoutLogging()
                 .setParallelism(1);
         try {
-            Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader(remoteDir + "/Datasets/polblogs/polblogs_init.csv", env)
+            Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader(remoteDir + "/Datasets/PolBlogs/polblogs_init.csv", env)
                     .ignoreCommentsEdges("#")
                     .fieldDelimiterEdges(";")
                     .keyType(Long.class);
@@ -37,11 +37,11 @@ public class PRPolBlogsExact {
                     .setIterations(iterations)
                     .setOutputSize(outputSize);
 
-            String outputDir = String.format("%s/Results/PolBlogs-exact", remoteDir);
+            String outputDir = String.format("%s/Results/PR/PolBlogs-exact", remoteDir);
             PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat(outputDir, System.lineSeparator(), ";", false, true);
             outputFormat.setName("exact_PR");
 
-            FileStreamProvider<String> streamProvider = new FileStreamProvider<>(localDir + "/Datasets/polblogs/polblogs_cont.csv", s -> {
+            FileStreamProvider<String> streamProvider = new FileStreamProvider<>(localDir + "/Datasets/PolBlogs/polblogs_cont.csv", s -> {
                 Thread.sleep(10);
                 return s;
             });
@@ -49,7 +49,7 @@ public class PRPolBlogsExact {
             approximatedPageRank.setConfig(config);
             approximatedPageRank.setOutputFormat(outputFormat);
 
-            String dir = localDir + "/Statistics/polblogs/PR";
+            String dir = localDir + "/Statistics/PR/PolBlogs";
             approximatedPageRank.setObserver(new ExactPRStatistics(dir, args[4]));
 
             approximatedPageRank.start();
