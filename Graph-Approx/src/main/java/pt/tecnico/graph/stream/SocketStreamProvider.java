@@ -4,9 +4,6 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.Socket;
 
-/**
- * Created by Renato on 01/04/2016.
- */
 public class SocketStreamProvider extends StreamProvider<String> {
 
     private final String host;

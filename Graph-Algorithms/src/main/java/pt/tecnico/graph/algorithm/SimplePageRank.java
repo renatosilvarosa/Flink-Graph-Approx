@@ -13,9 +13,6 @@ import org.apache.flink.types.LongValue;
 
 import java.io.Serializable;
 
-/**
- * Created by Renato on 10/04/2016.
- */
 public class SimplePageRank<K, VV, EV> implements GraphAlgorithm<K, VV, EV, DataSet<Tuple2<K, Double>>>, Serializable {
 
     private final double beta;

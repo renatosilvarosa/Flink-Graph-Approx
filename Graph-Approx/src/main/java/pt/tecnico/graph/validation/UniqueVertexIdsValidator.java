@@ -7,9 +7,6 @@ import org.apache.flink.api.java.typeutils.TupleTypeInfo;
 import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.validation.GraphValidator;
 
-/**
- * Created by Renato on 13/04/2016.
- */
 public class UniqueVertexIdsValidator<K, VV, EV> extends GraphValidator<K, VV, EV> {
 
     private static TypeInformation<Integer> intTypeInfo = TypeInformation.of(Integer.class);

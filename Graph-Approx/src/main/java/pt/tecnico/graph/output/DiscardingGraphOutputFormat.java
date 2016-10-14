@@ -4,9 +4,6 @@ import org.apache.flink.configuration.Configuration;
 
 import java.io.IOException;
 
-/**
- * Created by Renato on 08/07/2016.
- */
 public class DiscardingGraphOutputFormat<T> implements GraphOutputFormat<T> {
     @Override
     public void setName(String name) {

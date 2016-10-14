@@ -1,8 +1,5 @@
 package pt.tecnico.graph.algorithm.pagerank;
 
-/**
- * Created by Renato on 29/06/2016.
- */
 public class ApproximatedPageRankConfig {
     private int iterations = 20;
     private double beta = 0.85;

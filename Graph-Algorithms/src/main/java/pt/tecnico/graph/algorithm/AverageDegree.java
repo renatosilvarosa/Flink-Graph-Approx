@@ -7,9 +7,6 @@ import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.GraphAlgorithm;
 import org.apache.flink.util.Collector;
 
-/**
- * Created by Renato on 05/04/2016.
- */
 public class AverageDegree<K, VV, EV> implements GraphAlgorithm<K, VV, EV, DataSet<Double>> {
 
     @Override

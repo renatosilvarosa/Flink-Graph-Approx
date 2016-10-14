@@ -8,9 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-/**
- * Created by Renato on 27/07/2016.
- */
 public abstract class PRStatistics implements PageRankQueryObserver<Long, NullValue> {
     private final String dir;
     private final String fileName;

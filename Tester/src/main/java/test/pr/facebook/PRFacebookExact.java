@@ -9,9 +9,6 @@ import pt.tecnico.graph.algorithm.pagerank.PageRankCsvOutputFormat;
 import pt.tecnico.graph.stream.SocketStreamProvider;
 import test.pr.ExactPRStatistics;
 
-/**
- * Created by Renato on 09/04/2016.
- */
 public class PRFacebookExact {
     public static void main(String[] args) {
         String localDir = args[0];

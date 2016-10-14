@@ -12,9 +12,6 @@ import pt.tecnico.graph.stream.GraphUpdates;
 
 import java.util.Map;
 
-/**
- * Created by Renato on 26/07/2016.
- */
 public interface PageRankQueryObserver<K, EV> {
     void onStart() throws Exception;
 

@@ -19,9 +19,6 @@ import pt.tecnico.graph.stream.StreamProvider;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * Created by Renato on 24/06/2016.
- */
 public class TopDegree extends GraphStreamHandler<Tuple2<Long, LongValue>> {
 
     private final EdgeDirection edgeDirection;

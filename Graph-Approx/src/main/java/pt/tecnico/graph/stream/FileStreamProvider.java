@@ -7,9 +7,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-/**
- * Created by Renato on 05/04/2016.
- */
 public class FileStreamProvider<V> extends MappingStreamProvider<String, V> {
 
     private final Path filePath;

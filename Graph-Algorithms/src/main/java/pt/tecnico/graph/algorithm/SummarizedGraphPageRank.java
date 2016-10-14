@@ -10,9 +10,6 @@ import org.apache.flink.graph.spargel.ScatterGatherConfiguration;
 
 import java.io.Serializable;
 
-/**
- * Created by Renato on 10/04/2016.
- */
 public class SummarizedGraphPageRank implements GraphAlgorithm<Long, Double, Double, DataSet<Tuple2<Long, Double>>>, Serializable {
 
     private final double beta;

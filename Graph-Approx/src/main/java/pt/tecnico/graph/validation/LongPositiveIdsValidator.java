@@ -5,9 +5,6 @@ import org.apache.flink.api.java.DataSet;
 import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.validation.GraphValidator;
 
-/**
- * Created by Renato on 29/06/2016.
- */
 public class LongPositiveIdsValidator<K, VV, EV> extends GraphValidator<K, VV, EV> {
 
     private static TypeInformation<Long> longTypeInfo = TypeInformation.of(Long.class);
