@@ -98,7 +98,7 @@ public abstract class GraphStreamHandler<R> implements Runnable {
         return new Edge<>(Long.valueOf(data[1]), Long.valueOf(data[2]), NullValue.getInstance());
     }
 
-    public enum ObserverResponse {
+    public enum Action {
         REPEAT_LAST_ANSWER,
         COMPUTE_APPROXIMATE,
         COMPUTE_EXACT

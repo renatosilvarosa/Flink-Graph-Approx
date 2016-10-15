@@ -3,8 +3,8 @@ package test.pr.facebook;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.graph.Graph;
 import org.apache.flink.types.NullValue;
-import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRank;
-import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRankConfig;
+import pt.tecnico.graph.algorithm.pagerank.ApproximatePageRank;
+import pt.tecnico.graph.algorithm.pagerank.ApproximatePageRankConfig;
 import pt.tecnico.graph.algorithm.pagerank.PageRankCsvOutputFormat;
 import pt.tecnico.graph.stream.SocketStreamProvider;
 import test.pr.ApproximatedPRStatistics;
@@ -30,7 +30,7 @@ public class PRFacebookApprox {
                     .fieldDelimiterEdges("\t")
                     .keyType(Long.class);
 
-            ApproximatedPageRankConfig config = new ApproximatedPageRankConfig()
+            ApproximatePageRankConfig config = new ApproximatePageRankConfig()
                     .setBeta(0.85)
                     .setIterations(iterations)
                     .setUpdatedRatioThreshold(threshold)
@@ -41,15 +41,15 @@ public class PRFacebookApprox {
             PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat(outputDir, System.lineSeparator(), ";", false, true);
             outputFormat.setName("approx_PR");
 
-            ApproximatedPageRank approximatedPageRank = new ApproximatedPageRank(new SocketStreamProvider("localhost", 2345),
+            ApproximatePageRank approximatePageRank = new ApproximatePageRank(new SocketStreamProvider("localhost", 2345),
                     graph);
-            approximatedPageRank.setConfig(config);
-            approximatedPageRank.setOutputFormat(outputFormat);
+            approximatePageRank.setConfig(config);
+            approximatePageRank.setOutputFormat(outputFormat);
 
             String dir = localDir + "/Statistics/PR/Facebook";
-            approximatedPageRank.setObserver(new ApproximatedPRStatistics(dir, args[6]));
+            approximatePageRank.setObserver(new ApproximatedPRStatistics(dir, args[6]));
 
-            approximatedPageRank.start();
+            approximatePageRank.start();
 
         } catch (Exception e) {
             e.printStackTrace();

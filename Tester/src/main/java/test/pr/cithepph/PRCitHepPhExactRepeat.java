@@ -3,8 +3,8 @@ package test.pr.cithepph;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.graph.Graph;
 import org.apache.flink.types.NullValue;
-import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRank;
-import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRankConfig;
+import pt.tecnico.graph.algorithm.pagerank.ApproximatePageRank;
+import pt.tecnico.graph.algorithm.pagerank.ApproximatePageRankConfig;
 import pt.tecnico.graph.algorithm.pagerank.PageRankCsvOutputFormat;
 import pt.tecnico.graph.stream.SocketStreamProvider;
 import test.pr.ExactRepeatPRStatistics;
@@ -28,7 +28,7 @@ public class PRCitHepPhExactRepeat {
                     .fieldDelimiterEdges("\t")
                     .keyType(Long.class);
 
-            ApproximatedPageRankConfig config = new ApproximatedPageRankConfig()
+            ApproximatePageRankConfig config = new ApproximatePageRankConfig()
                     .setBeta(0.85)
                     .setIterations(iterations)
                     .setOutputSize(outputSize);
@@ -37,15 +37,15 @@ public class PRCitHepPhExactRepeat {
             PageRankCsvOutputFormat outputFormat = new PageRankCsvOutputFormat(outputDir, System.lineSeparator(), ";", false, true);
             outputFormat.setName("exact-repeat_PR");
 
-            ApproximatedPageRank approximatedPageRank = new ApproximatedPageRank(new SocketStreamProvider("localhost", 1234),
+            ApproximatePageRank approximatePageRank = new ApproximatePageRank(new SocketStreamProvider("localhost", 1234),
                     graph);
-            approximatedPageRank.setConfig(config);
-            approximatedPageRank.setOutputFormat(outputFormat);
+            approximatePageRank.setConfig(config);
+            approximatePageRank.setOutputFormat(outputFormat);
 
             String dir = localDir + "/Statistics/PR/CitHepPh";
-            approximatedPageRank.setObserver(new ExactRepeatPRStatistics(dir, args[4]));
+            approximatePageRank.setObserver(new ExactRepeatPRStatistics(dir, args[4]));
 
-            approximatedPageRank.start();
+            approximatePageRank.start();
 
         } catch (Exception e) {
             e.printStackTrace();

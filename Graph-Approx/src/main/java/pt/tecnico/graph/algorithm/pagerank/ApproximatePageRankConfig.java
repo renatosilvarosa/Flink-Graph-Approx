@@ -1,6 +1,6 @@
 package pt.tecnico.graph.algorithm.pagerank;
 
-public class ApproximatedPageRankConfig {
+public class ApproximatePageRankConfig {
     private int iterations = 20;
     private double beta = 0.85;
     private double updatedRatioThreshold = 0.0;
@@ -13,7 +13,7 @@ public class ApproximatedPageRankConfig {
         return iterations;
     }
 
-    public ApproximatedPageRankConfig setIterations(int iterations) {
+    public ApproximatePageRankConfig setIterations(int iterations) {
         this.iterations = iterations;
         return this;
     }
@@ -22,7 +22,7 @@ public class ApproximatedPageRankConfig {
         return beta;
     }
 
-    public ApproximatedPageRankConfig setBeta(double beta) {
+    public ApproximatePageRankConfig setBeta(double beta) {
         this.beta = beta;
         return this;
     }
@@ -31,7 +31,7 @@ public class ApproximatedPageRankConfig {
         return updatedRatioThreshold;
     }
 
-    public ApproximatedPageRankConfig setUpdatedRatioThreshold(double updatedRatioThreshold) {
+    public ApproximatePageRankConfig setUpdatedRatioThreshold(double updatedRatioThreshold) {
         this.updatedRatioThreshold = updatedRatioThreshold;
         return this;
     }
@@ -40,7 +40,7 @@ public class ApproximatedPageRankConfig {
         return updatedNumberThreshold;
     }
 
-    public ApproximatedPageRankConfig setUpdatedNumberThreshold(long updatedNumberThreshold) {
+    public ApproximatePageRankConfig setUpdatedNumberThreshold(long updatedNumberThreshold) {
         this.updatedNumberThreshold = updatedNumberThreshold;
         return this;
     }
@@ -49,7 +49,7 @@ public class ApproximatedPageRankConfig {
         return neighborhoodSize;
     }
 
-    public ApproximatedPageRankConfig setNeighborhoodSize(int neighborhoodSize) {
+    public ApproximatePageRankConfig setNeighborhoodSize(int neighborhoodSize) {
         this.neighborhoodSize = neighborhoodSize;
         return this;
     }
@@ -58,7 +58,7 @@ public class ApproximatedPageRankConfig {
         return outputSize;
     }
 
-    public ApproximatedPageRankConfig setOutputSize(int outputSize) {
+    public ApproximatePageRankConfig setOutputSize(int outputSize) {
         this.outputSize = outputSize;
         return this;
     }

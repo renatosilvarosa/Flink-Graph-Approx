@@ -17,12 +17,12 @@ public interface PageRankQueryObserver<K, EV> {
 
     boolean beforeUpdates(GraphUpdates<K, EV> updates, GraphUpdateStatistics statistics);
 
-    GraphStreamHandler.ObserverResponse onQuery(int id, String query, Graph<Long, NullValue, NullValue> graph,
-                                                GraphUpdates<K, EV> updates, GraphUpdateStatistics statistics,
-                                                Map<K, GraphUpdateTracker.UpdateInfo> updateInfos,
-                                                ApproximatedPageRankConfig config);
+    GraphStreamHandler.Action onQuery(int id, String query, Graph<Long, NullValue, NullValue> graph,
+                                      GraphUpdates<K, EV> updates, GraphUpdateStatistics statistics,
+                                      Map<K, GraphUpdateTracker.UpdateInfo> updateInfos,
+                                      ApproximatePageRankConfig config);
 
-    void onQueryResult(int id, String query, GraphStreamHandler.ObserverResponse response, Graph<Long, NullValue, NullValue> graph,
+    void onQueryResult(int id, String query, GraphStreamHandler.Action action, Graph<Long, NullValue, NullValue> graph,
                        Graph<Long, Double, Double> summaryGraph, DataSet<Tuple2<Long, Double>> result,
                        JobExecutionResult jobExecutionResult);
 

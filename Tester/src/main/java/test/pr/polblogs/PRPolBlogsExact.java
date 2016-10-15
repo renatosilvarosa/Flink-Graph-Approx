@@ -3,8 +3,8 @@ package test.pr.polblogs;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.graph.Graph;
 import org.apache.flink.types.NullValue;
-import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRank;
-import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRankConfig;
+import pt.tecnico.graph.algorithm.pagerank.ApproximatePageRank;
+import pt.tecnico.graph.algorithm.pagerank.ApproximatePageRankConfig;
 import pt.tecnico.graph.algorithm.pagerank.PageRankCsvOutputFormat;
 import pt.tecnico.graph.stream.FileStreamProvider;
 import test.pr.ExactPRStatistics;
@@ -29,7 +29,7 @@ public class PRPolBlogsExact {
                     .fieldDelimiterEdges(";")
                     .keyType(Long.class);
 
-            ApproximatedPageRankConfig config = new ApproximatedPageRankConfig()
+            ApproximatePageRankConfig config = new ApproximatePageRankConfig()
                     .setBeta(0.85)
                     .setIterations(iterations)
                     .setOutputSize(outputSize);
@@ -42,14 +42,14 @@ public class PRPolBlogsExact {
                 Thread.sleep(10);
                 return s;
             });
-            ApproximatedPageRank approximatedPageRank = new ApproximatedPageRank(streamProvider, graph);
-            approximatedPageRank.setConfig(config);
-            approximatedPageRank.setOutputFormat(outputFormat);
+            ApproximatePageRank approximatePageRank = new ApproximatePageRank(streamProvider, graph);
+            approximatePageRank.setConfig(config);
+            approximatePageRank.setOutputFormat(outputFormat);
 
             String dir = localDir + "/Statistics/PR/PolBlogs";
-            approximatedPageRank.setObserver(new ExactPRStatistics(dir, args[4]));
+            approximatePageRank.setObserver(new ExactPRStatistics(dir, args[4]));
 
-            approximatedPageRank.start();
+            approximatePageRank.start();
 
         } catch (Exception e) {
             e.printStackTrace();

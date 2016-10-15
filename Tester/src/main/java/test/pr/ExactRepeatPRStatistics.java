@@ -5,7 +5,7 @@ import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.graph.Graph;
 import org.apache.flink.types.NullValue;
-import pt.tecnico.graph.algorithm.pagerank.ApproximatedPageRankConfig;
+import pt.tecnico.graph.algorithm.pagerank.ApproximatePageRankConfig;
 import pt.tecnico.graph.stream.GraphStreamHandler;
 import pt.tecnico.graph.stream.GraphUpdateStatistics;
 import pt.tecnico.graph.stream.GraphUpdateTracker;
@@ -31,18 +31,18 @@ public class ExactRepeatPRStatistics extends PRStatistics {
     }
 
     @Override
-    public GraphStreamHandler.ObserverResponse onQuery(int id, String query, Graph<Long, NullValue, NullValue> graph,
-                                                       GraphUpdates<Long, NullValue> updates, GraphUpdateStatistics statistics,
-                                                       Map<Long, GraphUpdateTracker.UpdateInfo> updateInfos,
-                                                       ApproximatedPageRankConfig config) {
+    public GraphStreamHandler.Action onQuery(int id, String query, Graph<Long, NullValue, NullValue> graph,
+                                             GraphUpdates<Long, NullValue> updates, GraphUpdateStatistics statistics,
+                                             Map<Long, GraphUpdateTracker.UpdateInfo> updateInfos,
+                                             ApproximatePageRankConfig config) {
         if (id % 2 == 0) {
-            return GraphStreamHandler.ObserverResponse.COMPUTE_EXACT;
+            return GraphStreamHandler.Action.COMPUTE_EXACT;
         }
-        return GraphStreamHandler.ObserverResponse.REPEAT_LAST_ANSWER;
+        return GraphStreamHandler.Action.REPEAT_LAST_ANSWER;
     }
 
     @Override
-    public void onQueryResult(int id, String query, GraphStreamHandler.ObserverResponse response, Graph<Long,
+    public void onQueryResult(int id, String query, GraphStreamHandler.Action action, Graph<Long,
             NullValue, NullValue> graph, Graph<Long, Double, Double> summaryGraph, DataSet<Tuple2<Long, Double>> result,
                               JobExecutionResult jobExecutionResult) {
         try {

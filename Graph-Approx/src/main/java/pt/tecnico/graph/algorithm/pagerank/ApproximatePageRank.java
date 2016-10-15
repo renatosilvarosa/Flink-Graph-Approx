@@ -22,8 +22,8 @@ import pt.tecnico.graph.stream.*;
 import java.util.Iterator;
 import java.util.Set;
 
-public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double>> {
-    private ApproximatedPageRankConfig config;
+public class ApproximatePageRank extends GraphStreamHandler<Tuple2<Long, Double>> {
+    private ApproximatePageRankConfig config;
 
     private PageRankQueryObserver<Long, NullValue> observer;
     private TypeSerializerInputFormat<Tuple2<Long, Double>> rankInputFormat;
@@ -31,7 +31,7 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
     private TypeInformation<Tuple2<Long, Double>> rankTypeInfo;
     private Graph<Long, Double, Double> summaryGraph;
 
-    public ApproximatedPageRank(StreamProvider<String> updateStream, Graph<Long, NullValue, NullValue> graph) {
+    public ApproximatePageRank(StreamProvider<String> updateStream, Graph<Long, NullValue, NullValue> graph) {
         super(updateStream, graph);
     }
 
@@ -108,14 +108,14 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
                         rankInputFormat.setFilePath("cache/ranks" + ((iteration - 1) % 5));
                         DataSet<Tuple2<Long, Double>> previousRanks = env.createInput(rankInputFormat, rankTypeInfo);
 
-                        ObserverResponse response = observer.onQuery(iteration, update, graph, graphUpdates, statistics,
+                        Action action = observer.onQuery(iteration, update, graph, graphUpdates, statistics,
                                 graphUpdateTracker.getUpdateInfos(), config);
 
                         rankOutputFormat.setOutputFilePath(new Path("cache/ranks" + (iteration % 5)));
 
                         DataSet<Tuple2<Long, Double>> newRanks = null;
 
-                        switch (response) {
+                        switch (action) {
                             case REPEAT_LAST_ANSWER:
                                 newRanks = previousRanks;
                                 summaryGraph = null;
@@ -134,7 +134,7 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
                         newRanks.output(rankOutputFormat);
 
                         env.execute("Approx PageRank it. " + iteration);
-                        observer.onQueryResult(iteration, update, response, graph, summaryGraph, newRanks, env.getLastJobExecutionResult());
+                        observer.onQueryResult(iteration, update, action, graph, summaryGraph, newRanks, env.getLastJobExecutionResult());
                         break;
                     case "END":
                         observer.onStop();
@@ -195,15 +195,15 @@ public class ApproximatedPageRank extends GraphStreamHandler<Tuple2<Long, Double
         ranks.sortPartition(1, Order.DESCENDING).setParallelism(1).first(config.getOutputSize()).output(outputFormat);
     }
 
-    public ApproximatedPageRankConfig getConfig() {
+    public ApproximatePageRankConfig getConfig() {
         return config;
     }
 
-    public void setConfig(ApproximatedPageRankConfig config) {
+    public void setConfig(ApproximatePageRankConfig config) {
         this.config = config;
     }
 
-    public ApproximatedPageRank setObserver(PageRankQueryObserver<Long, NullValue> observer) {
+    public ApproximatePageRank setObserver(PageRankQueryObserver<Long, NullValue> observer) {
         this.observer = observer;
         return this;
     }
