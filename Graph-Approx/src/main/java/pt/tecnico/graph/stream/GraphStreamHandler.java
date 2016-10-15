@@ -1,5 +1,6 @@
 package pt.tecnico.graph.stream;
 
+import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.io.TypeSerializerInputFormat;
 import org.apache.flink.api.java.io.TypeSerializerOutputFormat;
@@ -80,7 +81,9 @@ public abstract class GraphStreamHandler<R> implements Runnable {
         edgeOutputFormat.setOutputFilePath(new Path("cache/edges" + (iteration % 5)));
         graph.getEdgeIds().output(edgeOutputFormat);
 
-        env.execute("Apply updates it. " + iteration);
+
+        JobExecutionResult result = env.execute("Apply updates it. " + iteration);
+        System.err.format("%d;%d%n", graphUpdateTracker.getAccumulatedTime(), result.getNetRuntime());
     }
 
     protected void registerEdgeDelete(String[] split) {
