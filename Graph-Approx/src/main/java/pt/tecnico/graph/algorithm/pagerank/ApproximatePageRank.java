@@ -64,7 +64,7 @@ public class ApproximatePageRank extends GraphStreamHandler<Tuple2<Long, Double>
         ranks.output(rankOutputFormat);
         outputResult("", ranks);
         env.execute("First PageRank calculation");
-        System.out.format("%d;%d", 0, graphUpdateTracker.getAccumulatedTime());
+        System.out.format("%d;%d%n", 0, graphUpdateTracker.getAccumulatedTime());
         graphUpdateTracker.resetAll();
     }
 

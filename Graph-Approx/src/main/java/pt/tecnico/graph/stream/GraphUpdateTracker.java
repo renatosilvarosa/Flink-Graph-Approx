@@ -23,9 +23,10 @@ public class GraphUpdateTracker<K, VV, EV> implements Serializable {
     private long currentNumberOfVertices;
     private long currentNumberOfEdges;
 
-    private long accumulatedTime = 0L;
+    private long accumulatedTime;
 
     public GraphUpdateTracker(Graph<K, VV, EV> initialGraph) {
+        accumulatedTime = 0L;
         try {
             long start = System.nanoTime();
             List<Tuple2<K, UpdateInfo>> degrees = initialGraph.inDegrees()
