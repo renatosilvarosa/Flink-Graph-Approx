@@ -27,6 +27,7 @@ public class GraphUpdateTracker<K, VV, EV> implements Serializable {
 
     public GraphUpdateTracker(Graph<K, VV, EV> initialGraph) {
         try {
+            long start = System.nanoTime();
             List<Tuple2<K, UpdateInfo>> degrees = initialGraph.inDegrees()
                     .join(initialGraph.outDegrees())
                     .where(0).equalTo(0)
@@ -41,6 +42,7 @@ public class GraphUpdateTracker<K, VV, EV> implements Serializable {
                     .collect(Collectors.toMap(t -> t.f0, t -> t.f1));
             currentNumberOfVertices = initialGraph.numberOfVertices();
             currentNumberOfEdges = initialGraph.numberOfEdges();
+            accumulatedTime += System.nanoTime() - start;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -193,6 +195,7 @@ public class GraphUpdateTracker<K, VV, EV> implements Serializable {
 
     public void resetAll() {
         infoMap.values().forEach(UpdateInfo::reset);
+        accumulatedTime = 0;
     }
 
     public long getAccumulatedTime() {

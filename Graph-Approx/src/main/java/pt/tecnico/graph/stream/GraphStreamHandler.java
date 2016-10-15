@@ -83,7 +83,7 @@ public abstract class GraphStreamHandler<R> implements Runnable {
 
 
         JobExecutionResult result = env.execute("Apply updates it. " + iteration);
-        System.err.format("%d;%d%n", graphUpdateTracker.getAccumulatedTime(), result.getNetRuntime());
+        System.out.format("%d;%d;%d%n", iteration, graphUpdateTracker.getAccumulatedTime(), result.getNetRuntime());
     }
 
     protected void registerEdgeDelete(String[] split) {
