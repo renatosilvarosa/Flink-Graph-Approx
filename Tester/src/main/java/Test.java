@@ -11,14 +11,16 @@ public class Test {
         );
 
         env.getConfig()
-                //.disableSysoutLogging()
+                .disableSysoutLogging()
                 .setParallelism(1);
         Graph<Long, NullValue, NullValue> graph = Graph.fromCsvReader(dir + "/Datasets/PolBlogs/polblogs_init.csv", env)
                 .ignoreCommentsEdges("#")
                 .fieldDelimiterEdges(";")
                 .keyType(Long.class);
 
-        GraphUpdateTracker<Long, NullValue, NullValue> updateTracker = new GraphUpdateTracker<>(graph);
-        System.out.format("%d;%d%n", 0, updateTracker.getAccumulatedTime());
+        for (int i = 0; i < 100; i++) {
+            GraphUpdateTracker<Long, NullValue, NullValue> updateTracker = new GraphUpdateTracker<>(graph);
+            System.out.format("%d;%d%n", i, updateTracker.getAccumulatedTime());
+        }
     }
 }
