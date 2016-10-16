@@ -38,6 +38,7 @@ public class ApproximatePageRank extends GraphStreamHandler<Tuple2<Long, Double>
     @Override
     public void init() throws Exception {
         graphUpdateTracker = new GraphUpdateTracker<>(graph);
+        System.out.format("%d;%d%n", 0, graphUpdateTracker.getAccumulatedTime());
 
         TypeInformation<Tuple2<Long, Long>> edgeTypeInfo = graph.getEdgeIds().getType();
         edgeInputFormat = new TypeSerializerInputFormat<>(edgeTypeInfo);
@@ -64,7 +65,7 @@ public class ApproximatePageRank extends GraphStreamHandler<Tuple2<Long, Double>
         ranks.output(rankOutputFormat);
         outputResult("", ranks);
         env.execute("First PageRank calculation");
-        System.out.format("%d;%d%n", 0, graphUpdateTracker.getAccumulatedTime());
+
         graphUpdateTracker.resetAll();
     }
 
