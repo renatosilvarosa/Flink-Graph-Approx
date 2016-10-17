@@ -2,6 +2,12 @@ package pt.tecnico.graph.stream;
 
 import java.util.Collection;
 
+/**
+ * Stream provider for elements coming from a java {@link Collection}
+ *
+ * @param <T>
+ * @author Renato Rosa
+ */
 public class CollectionStreamProvider<T> extends StreamProvider<T> {
     private final Collection<T> collection;
 

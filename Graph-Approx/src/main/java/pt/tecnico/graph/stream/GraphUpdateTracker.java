@@ -12,6 +12,14 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+/**
+ * Tracker of the updates to a graph
+ *
+ * @param <K>
+ * @param <VV>
+ * @param <EV>
+ * @author Renato Rosa
+ */
 public class GraphUpdateTracker<K, VV, EV> implements Serializable {
     private final Set<K> verticesToAdd = new HashSet<>();
     private final Set<K> verticesToRemove = new HashSet<>();

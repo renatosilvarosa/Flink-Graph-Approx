@@ -19,6 +19,11 @@ import org.objenesis.ObjenesisStd;
 
 import java.util.Collections;
 
+/**
+ * Utility methods for graphs in Flink
+ *
+ * @author Renato Rosa
+ */
 public class GraphUtils {
 
     static <T> DataSet<T> emptyDataSet(ExecutionEnvironment env, TypeInformation<T> typeInformation) {

@@ -12,6 +12,13 @@ import pt.tecnico.graph.stream.GraphUpdates;
 
 import java.util.Map;
 
+/**
+ * Callback methods to be defined by the user
+ *
+ * @param <K>
+ * @param <EV>
+ * @author Renato Rosa
+ */
 public interface PageRankQueryObserver<K, EV> {
     void onStart() throws Exception;
 

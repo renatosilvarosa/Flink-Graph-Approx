@@ -2,6 +2,12 @@ package pt.tecnico.graph.stream;
 
 import org.apache.flink.api.common.functions.MapFunction;
 
+/**
+ * An abstract {@link StreamProvider} that transforms its input data
+ *
+ * @param <T>
+ * @param <V>
+ */
 public abstract class MappingStreamProvider<T, V> extends StreamProvider<V> {
 
     private MapFunction<T, V> mapFunction;

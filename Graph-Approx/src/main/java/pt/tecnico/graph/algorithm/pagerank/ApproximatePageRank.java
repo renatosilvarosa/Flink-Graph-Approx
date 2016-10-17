@@ -22,6 +22,11 @@ import pt.tecnico.graph.stream.*;
 import java.util.Iterator;
 import java.util.Set;
 
+/**
+ * The approximate PageRank module
+ *
+ * @author Renato Rosa
+ */
 public class ApproximatePageRank extends GraphStreamHandler<Tuple2<Long, Double>> {
     private ApproximatePageRankConfig config;
 

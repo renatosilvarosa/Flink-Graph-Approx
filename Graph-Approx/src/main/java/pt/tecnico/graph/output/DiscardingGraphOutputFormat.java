@@ -4,6 +4,12 @@ import org.apache.flink.configuration.Configuration;
 
 import java.io.IOException;
 
+/**
+ * A dummy {@link GraphOutputFormat} that discards everything
+ *
+ * @param <T>
+ * @author Renato Rosa
+ */
 public class DiscardingGraphOutputFormat<T> implements GraphOutputFormat<T> {
     @Override
     public void setName(String name) {

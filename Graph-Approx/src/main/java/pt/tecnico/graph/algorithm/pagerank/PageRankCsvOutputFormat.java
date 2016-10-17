@@ -11,6 +11,11 @@ import pt.tecnico.graph.output.GraphOutputFormat;
 
 import java.io.IOException;
 
+/**
+ * CSV output for PageRank
+ *
+ * @author Renato Rosa
+ */
 public class PageRankCsvOutputFormat implements GraphOutputFormat<Tuple2<Long, Double>> {
     private final Path outputDir;
     private final boolean printRanks;

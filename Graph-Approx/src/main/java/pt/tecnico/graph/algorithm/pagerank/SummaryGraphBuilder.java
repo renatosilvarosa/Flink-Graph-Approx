@@ -19,6 +19,13 @@ import pt.tecnico.graph.algorithm.GraphUtils;
 
 import java.io.Serializable;
 
+/**
+ * Class to build the summary graph, given the original graph and a set of "hot" vertices
+ *
+ * @param <VV>
+ * @param <EV>
+ * @author Renato Rosa
+ */
 public class SummaryGraphBuilder<VV, EV> implements Serializable {
 
     private static final VertexKeySelector<Long> keySelector = new VertexKeySelector<>(TypeInformation.of(Long.class));

@@ -7,6 +7,14 @@ import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.GraphAlgorithm;
 import org.apache.flink.util.Collector;
 
+/**
+ * Algorithm to calculate the average degree of a graph
+ *
+ * @param <K>
+ * @param <VV>
+ * @param <EV>
+ * @author Renato Rosa
+ */
 public class AverageDegree<K, VV, EV> implements GraphAlgorithm<K, VV, EV, DataSet<Double>> {
 
     @Override

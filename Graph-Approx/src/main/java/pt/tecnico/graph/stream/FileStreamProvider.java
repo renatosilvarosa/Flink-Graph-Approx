@@ -7,6 +7,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+/**
+ * Stream provider for data coming from a file
+ *
+ * @param <V>
+ * @author Renato Rosa
+ */
 public class FileStreamProvider<V> extends MappingStreamProvider<String, V> {
 
     private final Path filePath;

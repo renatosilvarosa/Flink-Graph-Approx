@@ -2,6 +2,11 @@ package pt.tecnico.graph.stream;
 
 import org.apache.flink.api.java.tuple.Tuple7;
 
+/**
+ * Container for graph statistics
+ *
+ * @author Renato Rosa
+ */
 public class GraphUpdateStatistics extends Tuple7<Long, Long, Long, Long, Long, Long, Long> {
     public GraphUpdateStatistics(long addedVertices, long removedVertices, long addedEdges, long removedEdges, long updatedVertices, long totalVertices, long totalEdges) {
         this.f0 = addedVertices;

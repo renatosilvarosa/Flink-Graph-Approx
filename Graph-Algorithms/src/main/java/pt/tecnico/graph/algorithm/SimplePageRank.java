@@ -13,6 +13,14 @@ import org.apache.flink.types.LongValue;
 
 import java.io.Serializable;
 
+/**
+ * Flink's PageRank adapted to support vertices without incoming or outgoing edges, and from any type
+ *
+ * @param <K>
+ * @param <VV>
+ * @param <EV>
+ * @author Renato Rosa
+ */
 public class SimplePageRank<K, VV, EV> implements GraphAlgorithm<K, VV, EV, DataSet<Tuple2<K, Double>>>, Serializable {
 
     private final double beta;

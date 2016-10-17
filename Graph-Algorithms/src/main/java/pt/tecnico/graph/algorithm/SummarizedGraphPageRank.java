@@ -10,6 +10,11 @@ import org.apache.flink.graph.spargel.ScatterGatherConfiguration;
 
 import java.io.Serializable;
 
+/**
+ * PageRank for a summary graph, with a big vertex thar should be handled in a special way
+ *
+ * @author Renato Rosa
+ */
 public class SummarizedGraphPageRank implements GraphAlgorithm<Long, Double, Double, DataSet<Tuple2<Long, Double>>>, Serializable {
 
     private final double beta;

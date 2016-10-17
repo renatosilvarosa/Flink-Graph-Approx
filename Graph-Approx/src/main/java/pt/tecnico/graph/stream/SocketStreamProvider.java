@@ -4,6 +4,11 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.Socket;
 
+/**
+ * Stream provider for data coming from a socket
+ *
+ * @author Renato Rosa
+ */
 public class SocketStreamProvider extends StreamProvider<String> {
 
     private final String host;

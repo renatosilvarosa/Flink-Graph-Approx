@@ -18,6 +18,12 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.stream.Collectors;
 
+/**
+ * Abstract class to handle updates to a graph coming as a stream
+ *
+ * @param <R>
+ * @author Renato Rosa
+ */
 public abstract class GraphStreamHandler<R> implements Runnable {
     protected final BlockingQueue<String> pendingUpdates;
     protected final ExecutionEnvironment env;

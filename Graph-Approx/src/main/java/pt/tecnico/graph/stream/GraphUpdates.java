@@ -6,6 +6,13 @@ import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Container for graph updates
+ *
+ * @param <K>
+ * @param <EV>
+ * @author Renato Rosa
+ */
 public class GraphUpdates<K, EV> implements Serializable {
     public final Set<K> verticesToAdd;
     public final Set<K> verticesToRemove;

@@ -1,5 +1,10 @@
 package pt.tecnico.graph.algorithm.pagerank;
 
+/**
+ * Configuration for {@link ApproximatePageRank}
+ *
+ * @author Renato Rosa
+ */
 public class ApproximatePageRankConfig {
     private int iterations = 20;
     private double beta = 0.85;
